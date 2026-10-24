@@ -113,3 +113,51 @@ def test_empty_image_fails_loudly():
     f.image[:] = 128.0
     with pytest.raises(RuntimeError):
         measure(f, Config(polarity="dark"))
+
+
+# ---- the block-level work, and the evidence behind the count ---------------
+def test_every_spacing_comes_from_a_recorded_cut():
+    """The counting figure is only honest if the cuts it draws are the cuts the
+    statistics were taken from, so the result must carry them."""
+    f = synth_foil(width=30, height=20, s=25, lam=2.4, skew=10, jitter=0.1)
+    r = measure(f, Config(cell=2.9, polarity="dark"))
+    assert r.cuts1 and r.cuts2, "no cuts recorded"
+    for x, peaks in r.cuts1[:5]:
+        assert 0 <= x <= f.width
+        assert np.all((peaks >= 0) & (peaks <= f.height))
+    # a cut with k peaks contributes k-1 spacings, so the totals must agree
+    expect = sum(max(0, len(p) - 1) for _, p in r.cuts1)
+    assert len(r.lam1) == expect, "the histogram does not match the drawn cuts"
+    assert len(r.lam_x) == len(r.lam)
+
+
+def test_blocks_carry_their_own_angles_and_measurement():
+    f = synth_foil(width=40, height=20, s=25, lam=2.4, skew=12, jitter=0.1)
+    r = measure(f, Config(cell=2.9, polarity="dark"))
+    rows = r.per_block()
+    assert len(rows) == len([b for b, _ in r.blocks if b is not None])
+    assert len(rows) > 1, "a 40x20 record should be split into several blocks"
+    for b in rows:
+        assert b["a1"] > 0 > b["a2"], "the two families must straddle zero"
+        assert b["n"] > 0 and np.isfinite(b["lam"])
+    # blocks tile the record left to right
+    xs = [b["x"] for b in rows]
+    assert min(xs) < f.width / 3 < max(xs)
+
+
+def test_report_writes_the_diagnostics(tmp_path):
+    f = synth_foil(width=30, height=20, s=25, lam=2.4, skew=10)
+    r = measure(f, Config(cell=2.9, polarity="dark"))
+    w = write_report(r, tmp_path, prefix="d")
+    for key in ("distribution", "counting", "blocks", "overview", "clean",
+                "verification", "csv", "blocks_csv", "json"):
+        assert key in w, f"{key} missing from the report"
+        assert w[key].exists() and w[key].stat().st_size > 0
+    # the scale panel plots the search, so it exists only when one was run
+    assert ("scale" in w) == bool(r.ladder)
+    head, *body = w["blocks_csv"].read_text().strip().splitlines()
+    assert head.startswith("x[") and "angle1[deg]" in head
+    assert len(body) == len(r.per_block())
+    spac = w["csv"].read_text().strip().splitlines()
+    assert spac[0].endswith("family")
+    assert len(spac) - 1 == len(r.lam)

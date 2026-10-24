@@ -72,6 +72,7 @@ written = write_report(res, Path("/report"), prefix="foil")
 figs = {k: base64.b64encode(Path(v).read_bytes()).decode()
         for k, v in written.items() if str(v).endswith(".png")}
 st = res.stats()
+blocks = res.per_block()
 json.dumps(dict(
     figures=figs,
     median=st["median"], q1=st["q1"], q3=st["q3"], n=st["n"],
@@ -81,8 +82,15 @@ json.dumps(dict(
     sensitivity=res.scale_sensitivity(), polarity=res.polarity,
     blocks=len([b for b, _ in res.blocks if b is not None]),
     cell_scale=res.cell,
+    blocks_table=blocks,
+    families=[
+        dict(n=len(res.lam1), median=float(__import__("numpy").median(res.lam1))) if len(res.lam1) else None,
+        dict(n=len(res.lam2), median=float(__import__("numpy").median(res.lam2))) if len(res.lam2) else None,
+    ],
+    cuts=len(res.cuts1) + len(res.cuts2),
     report=Path("/report/foil_result.json").read_text(),
     spacings=Path("/report/foil_spacings.csv").read_text(),
+    blocks_csv=Path("/report/foil_blocks.csv").read_text(),
 ))
 `);
     say("result", { json: res });

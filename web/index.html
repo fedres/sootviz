@@ -94,23 +94,66 @@
 <!-- 4 ───────────────────────────────────────────────────────────── -->
 <section class="step" id="step-result" hidden>
   <div class="step-head"><span class="num">4</span><h2>Result</h2></div>
+
+  <p style="font-size:14px;color:var(--dim);margin-bottom:4px">
+    The result is a <strong>distribution</strong>. A cellular front does not
+    have one cell width, it has a spread of them, so the median below is a
+    summary of the histogram — not a substitute for it.
+  </p>
   <div class="answer" id="lambda"></div>
   <div class="stats" id="stats"></div>
   <div id="flags"></div>
+
+  <figure><img id="fig-dist" alt="distribution of measured cell widths"><figcaption>
+    <strong>Left:</strong> every spacing measured, with the median and the
+    interquartile range. <strong>Centre:</strong> the same split into the two
+    families — independent measurements of the same quantity, so how far apart
+    they sit is the internal check. <strong>Right:</strong> the block medians
+    along the record, which show whether the cell size drifts downstream.
+  </figcaption></figure>
+
   <div class="row" style="margin-bottom:6px">
-    <a class="dl" id="dl-csv" download="sootviz_spacings.csv">download every spacing (CSV)</a>
-    <a class="dl" id="dl-json" download="sootviz_result.json">download the full result (JSON)</a>
+    <a class="dl" id="dl-csv" download="sootviz_spacings.csv">every spacing (CSV)</a>
+    <a class="dl" id="dl-blocks" download="sootviz_blocks.csv">per-block table (CSV)</a>
+    <a class="dl" id="dl-json" download="sootviz_result.json">full result (JSON)</a>
   </div>
+
+  <h3>Block by block</h3>
+  <p style="font-size:13.5px;color:var(--dim)">
+    The pattern turns along a record, so each block is given its own pair of
+    family angles and its own measurement. These are the numbers behind the
+    right-hand panel above.
+  </p>
+  <div style="overflow-x:auto"><table id="block-table"></table></div>
+
+  <h3>How the spacings were counted</h3>
+  <p style="font-size:13.5px;color:var(--dim)">
+    Every number in the histogram is the gap between two consecutive marks on
+    one vertical cut. Count the marks between two labels and you have done the
+    arithmetic yourself — there is nothing else in the statistics.
+  </p>
+  <figure><img id="fig-counting" alt="cuts and detected trajectory crossings"></figure>
+
+  <h3>The blocks the angles were fitted in</h3>
+  <figure><img id="fig-blocks" alt="per-block crops with their own fitted families"></figure>
+
+  <h3>Recombined over the whole record</h3>
+  <p style="font-size:13.5px;color:var(--dim)">
+    The per-block fields blended with a partition of unity, which is why the
+    contours stay continuous across the joins rather than breaking at them.
+  </p>
+  <figure><img id="fig-overview" alt="families over the whole record"></figure>
+
+  <h3>What the auto-contrast did</h3>
+  <figure><img id="fig-clean" alt="record before and after cleaning"></figure>
+
+  <h3>The scale it was measured at</h3>
   <figure><img id="fig-scale" alt="measured spacing against assumed scale"><figcaption>
-    The scale search. Flat means the answer does not depend on the assumption,
-    which is the signature of a sharp measurement; a sloping curve means the
-    record has no single cell width and you should quote the distribution.
+    Flat means the answer does not depend on the assumption, which is the
+    signature of a sharp measurement; a sloping curve means the record has no
+    single cell width and the distribution is the only honest answer.
   </figcaption></figure>
-  <figure><img id="fig-dist" alt="distribution of measured spacings"><figcaption>
-    Left: every spacing measured, with the median and the interquartile range.
-    Right: the block medians along the record, which show whether the cell size
-    drifts downstream.
-  </figcaption></figure>
+
   <div class="row"><button class="ghost" id="again">Measure another foil</button></div>
 </section>
 

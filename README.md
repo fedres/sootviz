@@ -87,8 +87,9 @@ at, and that is physics rather than a defect of the method — it is why
 published cell widths for irregular mixtures differ between authors by factors
 approaching two. So:
 
-- quote the **distribution**, not only the median — the IQR is written into
-  every report, and `*_spacings.csv` holds every spacing measured;
+- quote the **distribution**, not only the median — `*_distribution.png` shows
+  it three ways and `*_spacings.csv` holds every spacing measured, tagged with
+  its position and family;
 - read the **scale panel**. A flat curve means the number is robust; a sloping
   one means the record has no single cell width, and the number you quote
   should be accompanied by the scale at which it was taken;
@@ -122,6 +123,21 @@ sootviz synth --lam 2.5 --skew 12 --noise 0.3 --out demo
 sootviz benchmark                      # synthetic only
 sootviz benchmark --pdf CNFTaileb.pdf  # plus published foils
 ```
+
+### What a run writes
+
+| file | what it is |
+|---|---|
+| `*_distribution.png` | **the result**: every spacing, the two families separately, and the block medians along the record |
+| `*_families.png` | the verification overlay, in strips — check this first |
+| `*_counting.png` | the cuts and the detected trajectory crossings, with spacings labelled. Every number in the histogram is one gap here |
+| `*_blocks.png` | each block with its own fitted family angles, cell width and count |
+| `*_overview.png` | the per-block fields recombined over the whole record |
+| `*_clean.png` | before and after despeckling and local contrast equalisation |
+| `*_scale.png` | the scale search, so you can see whether you are on a plateau |
+| `*_spacings.csv` | every spacing, with its x position and which family it came from |
+| `*_blocks.csv` | per-block angles, cell width, count and coherence |
+| `*_result.json` | everything above as data, including the scale search |
 
 Then **look at `*_families.png` before you use the number.** The contours must
 lie along the tracks, one colour per family. If they do not, the controls that

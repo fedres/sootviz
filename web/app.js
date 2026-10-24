@@ -84,8 +84,6 @@ function arrived(r) {
   result = r;
   $("stage").textContent = "done — now check it.";
   img("fig-verify", r.figures.overview || r.figures.verification);
-  img("fig-scale", r.figures.scale);
-  img("fig-dist", r.figures.distribution);
   show("step-check");
   $("run").disabled = false;
   $("step-check").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -103,10 +101,19 @@ $("no").addEventListener("click", () => {
 $("yes").addEventListener("click", () => {
   const r = result, u = r.unit;
   const sig = (x, n = 3) => Number(x).toPrecision(n).replace(/\.?0+$/, "");
-  $("lambda").innerHTML = `λ = ${sig(r.median)} ${u} <small>— the median spacing</small>`;
+
+  ["dist", "counting", "blocks", "overview", "clean", "scale"].forEach((k) =>
+    img("fig-" + k, r.figures[k === "dist" ? "distribution" : k]));
+
+  $("lambda").innerHTML =
+    `λ = ${sig(r.median)} ${u} <small>median · IQR ${sig(r.q1)}–${sig(r.q3)} ${u}`
+    + ` · ${r.n} spacings</small>`;
   $("stats").innerHTML = [
     ["interquartile range", `${sig(r.q1)}–${sig(r.q3)} ${u}`],
+    ["5th–95th percentile", `${sig(r.p5)}–${sig(r.p95)} ${u}`],
     ["spacings measured", r.n],
+    ["blocks fitted", (r.blocks_table || []).length || 1],
+    ["cuts counted along", r.cuts || "—"],
     ["cells across the height", sig(r.cells_across, 2)],
     ["families agree to", `${Math.round(r.family_agreement)} %`],
     ["scale sensitivity", isFinite(r.sensitivity) ? `${Math.round(r.sensitivity)} %` : "—"],
@@ -134,9 +141,24 @@ $("yes").addEventListener("click", () => {
   $("flags").innerHTML = flags.map(([t, k]) =>
     `<div class="flag ${k === "ok" ? "" : k}" ${k === "ok" ? 'style="border-left-color:var(--ok)"' : ""}>${t}</div>`).join("");
 
+  // per-block table: the numbers behind the block panel of the histogram
+  const rows = r.blocks_table || [];
+  const head = ["x", "y", "angles", "λ", "spacings", "coherence"];
+  $("block-table").innerHTML =
+    "<tr>" + head.map((h, i) =>
+      `<th class="${i > 1 ? "num-col" : ""}">${h}${i < 2 ? " [" + u + "]" : ""}</th>`).join("") + "</tr>"
+    + rows.map((b) => "<tr>" + [
+        sig(b.x, 3), sig(b.y, 3),
+        `${b.a1 > 0 ? "+" : ""}${Math.round(b.a1)}° / ${Math.round(b.a2)}°`,
+        isFinite(b.lam) ? `${sig(b.lam)} ${u}` : "—",
+        b.n, sig(b.coherence, 2),
+      ].map((v, i) => `<td class="${i > 1 ? "num-col" : ""}">${v}</td>`).join("") + "</tr>").join("")
+    + (rows.length ? "" : '<tr><td colspan="6">one global fit — no blocks</td></tr>');
+
   const blob = (text, type) => URL.createObjectURL(new Blob([text], { type }));
   $("dl-csv").href = blob(r.spacings, "text/csv");
   $("dl-json").href = blob(r.report, "application/json");
+  if (r.blocks_csv) $("dl-blocks").href = blob(r.blocks_csv, "text/csv");
 
   show("step-result");
   $("step-result").scrollIntoView({ behavior: "smooth", block: "start" });

@@ -76,6 +76,29 @@ class Result:
     lam2: np.ndarray = field(repr=False, default=None)
     # (assumed scale, measured spacing) over the search, for the scale panel
     ladder: list = field(repr=False, default_factory=list)
+    # (x, peak positions) per vertical cut, per family: the evidence behind the
+    # count, drawn by the counting figure
+    cuts1: list = field(repr=False, default_factory=list)
+    cuts2: list = field(repr=False, default_factory=list)
+    # x of every spacing, so the distribution can be split by block
+    lam1_x: np.ndarray = field(repr=False, default=None)
+    lam2_x: np.ndarray = field(repr=False, default=None)
+
+    @property
+    def lam_x(self):
+        a = [v for v in (self.lam1_x, self.lam2_x) if v is not None]
+        return np.concatenate(a) if a else np.zeros(0)
+
+    def per_block(self):
+        """Per-block rows: angles, cell width, count, coherence."""
+        rows = []
+        for b, (xc, yc, bw, bh) in self.blocks:
+            if b is None:
+                continue
+            rows.append(dict(x=b.xc, y=b.yc, width=bw, height=bh,
+                             a1=b.a1, a2=b.a2, coherence=b.score,
+                             lam=b.lam, n=b.n))
+        return sorted(rows, key=lambda r: (r["y"], r["x"]))
 
     # ---- statistics -------------------------------------------------------
     @property
@@ -147,7 +170,14 @@ class Result:
 
 
 def _spacings(F, foil: Foil, cfg: Config, cell: float, region=None,
-              with_x: bool = False):
+              with_x: bool = False, collect=None):
+    """Spacings along vertical cuts through one family's field.
+
+    `collect`, if given, is a list that receives (x, peak positions) for each
+    cut taken, in physical units. That is the evidence behind the count: every
+    spacing in the result is the gap between two consecutive peaks on one of
+    these cuts, and nothing else enters the statistics.
+    """
     s = foil.s
     ny, nx = F.shape
     ys, ye, xs, xe = region if region else (0, ny, 0, nx)
@@ -162,6 +192,8 @@ def _spacings(F, foil: Foil, cfg: Config, cell: float, region=None,
         col = ndi.gaussian_filter1d(col, sm)
         pk, _ = find_peaks(col, prominence=cfg.prominence * col.max(),
                            distance=dist)
+        if collect is not None:
+            collect.append((xp / s, (np.sort(pk) + ys) / s))
         if len(pk) > 1:
             d = list(np.diff(np.sort(pk)) / s)
             out += d
@@ -214,8 +246,11 @@ def _once(foil: Foil, cfg: Config, cell: float, polarity: str,
                        (xc, yc, bw, bh)))
 
     F1, F2, good = blend(resp, angles, blocks, (ny, nx), s, band=st)
-    lam1, x1 = _spacings(np.nan_to_num(F1), foil, cfg, cell, with_x=True)
-    lam2, x2 = _spacings(np.nan_to_num(F2), foil, cfg, cell, with_x=True)
+    cuts1, cuts2 = ([], []) if not quick else (None, None)
+    lam1, x1 = _spacings(np.nan_to_num(F1), foil, cfg, cell, with_x=True,
+                         collect=cuts1)
+    lam2, x2 = _spacings(np.nan_to_num(F2), foil, cfg, cell, with_x=True,
+                         collect=cuts2)
     lam1, lam2 = list(lam1), list(lam2)
 
     if not quick:
@@ -232,7 +267,8 @@ def _once(foil: Foil, cfg: Config, cell: float, polarity: str,
     lam = np.asarray(lam1 + lam2)
     goodb = [b for b, _ in blocks if b is not None]
     coherence = float(np.median([b.score for b in goodb])) if goodb else 0.0
-    return dict(clean=cl, s=s, lam=lam, lam1=np.asarray(lam1), lam2=np.asarray(lam2),
+    return dict(clean=cl, s=s, lam=lam, cuts1=cuts1, cuts2=cuts2,
+                lam1_x=x1, lam2_x=x2, lam1=np.asarray(lam1), lam2=np.asarray(lam2),
                 blocks=blocks, coherence=coherence, F1=F1, F2=F2)
 
 
@@ -333,4 +369,6 @@ def measure(foil: Foil, cfg: Config | None = None, verbose: bool = False) -> Res
                   blocks=out["blocks"], polarity=pol,
                   coherence=out["coherence"], clean=out["clean"],
                   F1=out["F1"], F2=out["F2"],
-                  lam1=out["lam1"], lam2=out["lam2"], ladder=ladder)
+                  lam1=out["lam1"], lam2=out["lam2"], ladder=ladder,
+                  cuts1=out["cuts1"] or [], cuts2=out["cuts2"] or [],
+                  lam1_x=out["lam1_x"], lam2_x=out["lam2_x"])
