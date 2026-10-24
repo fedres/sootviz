@@ -56,7 +56,9 @@ $("run").addEventListener("click", () => {
       polarity: $("pol").value, equalise: parseFloat($("eq").value) || 2.5,
       name: "your foil",
     },
-  }, [bytes.slice(0)]);
+    // structured-cloned, not transferred: the buffer stays usable here so the
+    // same foil can be measured again after adjusting the controls.
+  });
 });
 
 function handle(ev) {
