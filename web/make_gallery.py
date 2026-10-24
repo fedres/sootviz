@@ -46,13 +46,21 @@ def main(d: Path) -> int:
     <div class="stat"><b>{row['agreement']:.0f} %</b><span>families agree to</span></div>
     <div class="stat"><b>{row['coherence']:.2f}</b><span>coherence</span></div>
   </div>
+  <figure><img src="{slug}_distribution.png" alt="distribution for {row['name']}">
+    <figcaption>The result: every spacing measured against the true value, the
+    two families separately, and the block medians along the record.</figcaption></figure>
+  <figure><img src="{slug}_counting.png" alt="how spacings were counted for {row['name']}">
+    <figcaption>Where the numbers come from — the vertical cuts, the
+    trajectory crossings found on them, and the gaps between consecutive
+    crossings, which are the measurements.</figcaption></figure>
+  <figure><img src="{slug}_blocks.png" alt="blocks for {row['name']}">
+    <figcaption>Each block with the family angles fitted inside it, its own
+    cell width and its own count.</figcaption></figure>
   <figure><img src="{slug}_overview.png" alt="track families over {row['name']}">
-    <figcaption>The two families, red and blue, over the cleaned record.</figcaption></figure>
+    <figcaption>The per-block fields recombined over the whole record.</figcaption></figure>
   <figure><img src="{slug}_scale.png" alt="scale search for {row['name']}">
     <figcaption>The scale search. Flat means the answer does not depend on the
     assumed scale.</figcaption></figure>
-  <figure><img src="{slug}_distribution.png" alt="distribution for {row['name']}">
-    <figcaption>Every spacing measured, against the true value.</figcaption></figure>
 </section>""")
     pub = doc.get("published", [])
     if pub:
