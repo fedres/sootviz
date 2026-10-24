@@ -3,7 +3,9 @@
 Measuring the detonation cell width from a soot-foil record — numerical or
 photographed — with the measurement you can check by eye before you trust it.
 
-*Karthik Thyagarajan, [Strawhat CFD](https://strawhatcfd.com)*
+*Karthik Thyagarajan · [Strawhat CFD](https://strawhatcfd.com)*
+
+**[Open the web version →](https://fedres.github.io/sootviz/)** — runs in your browser, your image never leaves your machine.
 
 ---
 
@@ -191,10 +193,55 @@ Pyodide, so the same Python runs in the visitor's browser, **the image never
 leaves their machine**, and there is no server to pay for or maintain — a static
 site in the spirit of the Caltech Detonation Database.
 
-## Citing
+## Using it on the web
 
-> SootViz-compute, K. Thyagarajan, Strawhat CFD.
-> Method described in Thyagarajan & Melguizo-Gavilanes (2026), Appendix C.
+A browser version runs the same Python through WebAssembly, so **the image
+never leaves the machine it is opened on** — nothing is uploaded, logged or
+stored:
+
+**https://fedres.github.io/sootviz/**
+
+It walks through loading a foil, giving its physical size, measuring, and —
+before any number is shown — the verification overlay and the question *do the
+contours follow the tracks?* The benchmark gallery behind the numbers below is
+at `/benchmarks/`.
+
+## If you use SootViz, please cite it
+
+It is free and always will be. Citing it is what makes it worth maintaining,
+and it lets a reader check how your cell widths were obtained.
+
+```bibtex
+@software{sootviz,
+  author  = {Thyagarajan, Karthik},
+  title   = {{SootViz}: cell-width measurement from detonation soot-foil records},
+  year    = {2026},
+  note    = {Strawhat CFD},
+  url     = {https://github.com/fedres/sootviz}
+}
+```
+
+and the paper describing the method (Appendix C):
+
+```bibtex
+@article{thyagarajan2026lbfs,
+  author  = {Thyagarajan, Karthik and Melguizo-Gavilanes, Jos\'e},
+  title   = {A systematic assessment of the lattice {B}oltzmann flux solver with
+             face-local gating as a scheme for flame acceleration, detonation
+             and deflagration-to-detonation transition. {P}art {I}:
+             one-dimensional detonation dynamics and inviscid detonations},
+  year    = {2026}
+}
+```
+
+In text: *cell widths were measured with SootViz (Thyagarajan, Strawhat CFD),
+which separates the two triple-point trajectory families and reports their
+disagreement as an error bar.*
+
+## Who made this
+
+Built by **Karthik Thyagarajan** at **[Strawhat CFD](https://strawhatcfd.com)**.
+Questions, bug reports and foils that defeat it are all welcome — open an issue.
 
 ## Licence
 

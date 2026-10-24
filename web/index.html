@@ -1,0 +1,232 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SootViz — detonation cell widths from soot foils</title>
+<meta name="description" content="Measure the detonation cell width from a soot-foil record, in your browser. The image never leaves your machine.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+
+<div class="wrap">
+<header>
+  <h1>Soot<span>Viz</span></h1>
+  <p class="tagline">Detonation cell widths from soot-foil records — with a measurement you check by eye before you trust it.</p>
+  <p class="byline">
+    Karthik Thyagarajan ·
+    <a href="https://strawhatcfd.com" target="_blank" rel="noopener">Strawhat CFD</a> ·
+    <a href="https://github.com/fedres/sootviz" target="_blank" rel="noopener">source</a> ·
+    MIT licence
+  </p>
+</header>
+
+<p class="note">
+  <strong>Your image never leaves your machine.</strong> The Python runs inside
+  this tab through WebAssembly — there is no server, nothing is uploaded, and
+  nothing is stored. The first run downloads about 25 MB of runtime, which your
+  browser then caches.
+</p>
+
+<!-- 1 ───────────────────────────────────────────────────────────── -->
+<section class="step" id="step-load">
+  <div class="step-head"><span class="num">1</span><h2>Your soot foil</h2></div>
+  <div id="drop">
+    <strong>Drop an image here</strong>, or click to choose
+    <small>PNG, JPG or TIFF. For figures inside a PDF, use the command line.</small>
+  </div>
+  <input type="file" id="file" accept="image/*" hidden>
+  <figure id="preview" hidden><img id="preview-img" alt="the foil you loaded"></figure>
+
+  <h3>Physical size of the image</h3>
+  <p style="font-size:13.5px;color:var(--dim)">
+    Required — every length in the method is physical, so an image alone cannot
+    be measured. Give the extent of the <em>image itself</em>, not of any figure
+    around it. Crop axes and labels away first.
+  </p>
+  <div class="fields">
+    <div class="field"><label for="w">Width</label><input id="w" type="number" step="any" placeholder="30"></div>
+    <div class="field"><label for="h">Height</label><input id="h" type="number" step="any" placeholder="20"></div>
+    <div class="field"><label for="u">Unit</label>
+      <select id="u"><option>mm</option><option>cm</option><option>m</option><option>in</option></select>
+    </div>
+  </div>
+
+  <h3>Optional</h3>
+  <div class="fields">
+    <div class="field"><label for="cell" title="Turns the scale search off">Expected λ</label><input id="cell" type="number" step="any" placeholder="auto"></div>
+    <div class="field"><label for="pol">Tracks are</label>
+      <select id="pol"><option value="auto">auto</option><option value="dark">dark</option><option value="bright">bright</option></select>
+    </div>
+    <div class="field"><label for="eq" title="In cell widths; raise it, never lower it">Contrast window</label><input id="eq" type="number" step="any" value="2.5"></div>
+  </div>
+
+  <div class="row">
+    <button id="run" disabled>Measure</button>
+    <span id="hint" style="font-size:13px;color:var(--faint)">Load an image and give its size.</span>
+  </div>
+</section>
+
+<!-- 2 ───────────────────────────────────────────────────────────── -->
+<section class="step" id="step-run" hidden>
+  <div class="step-head"><span class="num">2</span><h2>Measuring</h2></div>
+  <p style="font-size:13.5px;color:var(--dim)" id="stage">starting…</p>
+  <div id="log"></div>
+</section>
+
+<!-- 3 ───────────────────────────────────────────────────────────── -->
+<section class="step" id="step-check" hidden>
+  <div class="step-head"><span class="num">3</span><h2>Check it before you use it</h2></div>
+  <p>
+    This is the part that matters. The measurement can fail quietly: if the two
+    families of trajectories are misread, a number still comes out and still
+    looks plausible. So look at the overlay — <strong>each contour should wrap
+    one trajectory</strong>, red for one family and blue for the other, and the
+    contours should follow the tracks rather than cut across them.
+  </p>
+  <figure><img id="fig-verify" alt="track families drawn over the cleaned record"><figcaption>Verification overlay — the whole record, contours blended across blocks.</figcaption></figure>
+  <div class="gate">
+    <p><strong>Do the contours follow the tracks?</strong></p>
+    <div class="row" style="margin:0">
+      <button class="yes" id="yes">Yes — show the result</button>
+      <button class="no" id="no">No — let me adjust</button>
+    </div>
+  </div>
+</section>
+
+<!-- 4 ───────────────────────────────────────────────────────────── -->
+<section class="step" id="step-result" hidden>
+  <div class="step-head"><span class="num">4</span><h2>Result</h2></div>
+  <div class="answer" id="lambda"></div>
+  <div class="stats" id="stats"></div>
+  <div id="flags"></div>
+  <div class="row" style="margin-bottom:6px">
+    <a class="dl" id="dl-csv" download="sootviz_spacings.csv">download every spacing (CSV)</a>
+    <a class="dl" id="dl-json" download="sootviz_result.json">download the full result (JSON)</a>
+  </div>
+  <figure><img id="fig-scale" alt="measured spacing against assumed scale"><figcaption>
+    The scale search. Flat means the answer does not depend on the assumption,
+    which is the signature of a sharp measurement; a sloping curve means the
+    record has no single cell width and you should quote the distribution.
+  </figcaption></figure>
+  <figure><img id="fig-dist" alt="distribution of measured spacings"><figcaption>
+    Left: every spacing measured, with the median and the interquartile range.
+    Right: the block medians along the record, which show whether the cell size
+    drifts downstream.
+  </figcaption></figure>
+  <div class="row"><button class="ghost" id="again">Measure another foil</button></div>
+</section>
+
+<!-- how it works ─────────────────────────────────────────────────── -->
+<h2>How it measures</h2>
+<p>
+  A soot foil carries two families of triple-point trajectories, and the cell
+  width is the <strong>transverse distance between adjacent trajectories of one
+  family</strong>. Two traps make this easy to get wrong, silently. The pattern
+  is usually <em>sheared</em>, so the trajectory bounding a cell transversely is
+  not the one directly above it, and a nearest-neighbour rule invents a tail of
+  wide cells. And the cells <em>group</em> into larger patches, so the dominant
+  periodicity of the raw image — what autocorrelation or a spectrum returns — is
+  the grouping, not the cell. On one experimental plate that error was a factor
+  of three.
+</p>
+<p>
+  SootViz separates the families first, with a bank of oriented line filters,
+  fits their angles per block so the pattern may turn along a long record, and
+  measures each family on its own. The two families are then independent
+  measurements of the same quantity, so <strong>their disagreement is an error
+  bar</strong>, reported with every result alongside an orientation coherence.
+</p>
+
+<!-- validation ───────────────────────────────────────────────────── -->
+<h2>Does it work?</h2>
+<p style="font-size:14px;color:var(--dim)">
+  Four levels of evidence, in increasing order of realism. Reproduce any of them
+  with <code>sootviz benchmark</code>; the figures behind them are in the
+  <a href="benchmarks/">benchmark gallery</a>.
+</p>
+
+<h3>Synthetic foils — the only place truth is known exactly</h3>
+<table>
+  <tr><th>case</th><th class="num-col">true λ</th><th class="num-col">measured</th><th class="num-col">error</th><th class="num-col">families</th></tr>
+  <tr><td>regular</td><td class="num-col">2.50 mm</td><td class="num-col">2.48</td><td class="num-col">−0.8 %</td><td class="num-col">0 %</td></tr>
+  <tr><td>sheared (asymmetric families)</td><td class="num-col">2.50 mm</td><td class="num-col">2.48</td><td class="num-col">−0.8 %</td><td class="num-col">2 %</td></tr>
+  <tr><td>irregular (0.20 λ jitter)</td><td class="num-col">2.00 mm</td><td class="num-col">1.88</td><td class="num-col">−6.0 %</td><td class="num-col">0 %</td></tr>
+  <tr><td>noisy, low contrast</td><td class="num-col">3.00 mm</td><td class="num-col">2.52</td><td class="num-col">−16.0 %</td><td class="num-col">6 %</td></tr>
+</table>
+<p style="font-size:13.5px;color:var(--dim)">
+  The last row is the documented limit, not a hidden one: heavy noise at low
+  contrast shortens the plateau and costs about 15 %. A real record in that
+  state reports a high scale sensitivity, which is the signal to quote a
+  distribution rather than a number.
+</p>
+
+<h3>Published foils — measured from the authors' own figures</h3>
+<p style="font-size:14px">
+  Taileb, Melguizo-Gavilanes &amp; Chinnayya, <em>Combustion and Flame</em>
+  <strong>218</strong> (2020) 247, Fig. 5. The authors report a range over their
+  three chemistry models rather than a value per panel — “the cell size was
+  numerically estimated to lie in the range of 0.9 mm ≤ λ<sub>num</sub> ≤ 1.9 mm”
+  (p. 17) — and state that detailed chemistry gives the smaller cell, while
+  single-step was tuned to the experimental size. So what can honestly be checked
+  is range containment and that ordering:
+</p>
+<table>
+  <tr><th>panel</th><th class="num-col">SootViz</th><th class="num-col">IQR</th><th>in reported range</th></tr>
+  <tr><td>single-step</td><td class="num-col">2.07 mm</td><td class="num-col">1.50–2.74</td><td>yes</td></tr>
+  <tr><td>three-step chain-branching</td><td class="num-col">1.28 mm</td><td class="num-col">0.93–1.72</td><td>yes</td></tr>
+  <tr><td>detailed</td><td class="num-col">0.93 mm</td><td class="num-col">0.71–1.19</td><td>yes</td></tr>
+</table>
+<p style="font-size:13.5px;color:var(--dim)">
+  Ordering single-step ≥ three-step ≥ detailed is reproduced, and the two
+  extremes land on the authors' two bounds. Their figures are copyrighted and are
+  not reproduced here.
+</p>
+
+<h3>Real records</h3>
+<p style="font-size:14px">
+  A numerical foil from our own solver, 30 × 20 mm: λ = <strong>2.35 mm</strong>,
+  IQR 1.79–3.06, families agree to 10 %, scale sensitivity 6 %.
+  A photographed experimental plate, 5 m × 1 m, where the pattern turns along the
+  record: λ = <strong>0.162 m</strong> over 13 blocks, with family angles
+  swinging from +35°…+65° to −65°…−45°. That plate is the instructive one — the
+  families disagree by 19 % and the scale sensitivity is 23 %, so SootViz
+  <em>warns on both counts</em> instead of handing over a clean-looking number.
+</p>
+
+<!-- citation ─────────────────────────────────────────────────────── -->
+<h2 id="cite">If you use SootViz, please cite it</h2>
+<p>
+  This is free and always will be. Citing it is what makes it worth maintaining,
+  and it lets a reader check how your cell widths were obtained.
+</p>
+<pre class="cite" id="bib">@software{sootviz,
+  author  = {Thyagarajan, Karthik},
+  title   = {{SootViz}: cell-width measurement from detonation soot-foil records},
+  year    = {2026},
+  note    = {Strawhat CFD},
+  url     = {https://github.com/fedres/sootviz}
+}</pre>
+<p style="font-size:14px">And the paper describing the method (Appendix C):</p>
+<pre class="cite" id="bib2">@article{thyagarajan2026lbfs,
+  author  = {Thyagarajan, Karthik and Melguizo-Gavilanes, Jos\'e},
+  title   = {A systematic assessment of the lattice {B}oltzmann flux solver with
+             face-local gating as a scheme for flame acceleration, detonation and
+             deflagration-to-detonation transition. {P}art {I}: one-dimensional
+             detonation dynamics and inviscid detonations},
+  year    = {2026}
+}</pre>
+<div class="row" style="margin-top:0"><button class="ghost" id="copy-cite">Copy both</button></div>
+
+<footer>
+  <p>
+    <strong>SootViz</strong> — built by Karthik Thyagarajan at
+    <a href="https://strawhatcfd.com" target="_blank" rel="noopener">Strawhat CFD</a>.
+    MIT licensed · <a href="https://github.com/fedres/sootviz" target="_blank" rel="noopener">source and command-line tool</a>
+  </p>
+  <p>
+    Runs entirely in your browser through
+    <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a>.
+    No image you open here is uploaded, logged or stored.
+  </p>
+</footer>
+</div>
+
+<script src="app.js"></script>

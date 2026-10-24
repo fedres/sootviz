@@ -29,8 +29,8 @@ test = ["pytest>=7"]
 sootviz = "sootviz.cli:main"
 
 [project.urls]
-Homepage = "https://strawhatcfd.github.io/sootviz"
-Source = "https://github.com/strawhatcfd/sootviz"
+Homepage = "https://fedres.github.io/sootviz"
+Source = "https://github.com/fedres/sootviz"
 
 [tool.setuptools.packages.find]
 include = ["sootviz*"]
