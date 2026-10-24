@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sootviz-compute"
+version = "0.1.0"
+description = "Cell-width measurement from detonation soot-foil records"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Karthik Thyagarajan", email = "karthik.thyagarajan@pm.me" }]
+maintainers = [{ name = "Strawhat CFD" }]
+keywords = ["detonation", "soot foil", "cell size", "combustion", "image analysis"]
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Topic :: Scientific/Engineering :: Image Processing",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+]
+dependencies = ["numpy>=1.21", "scipy>=1.7", "matplotlib>=3.5", "pillow>=9.0"]
+
+[project.optional-dependencies]
+pdf = ["pymupdf>=1.21"]
+test = ["pytest>=7"]
+
+[project.scripts]
+sootviz = "sootviz.cli:main"
+
+[project.urls]
+Homepage = "https://strawhatcfd.github.io/sootviz"
+Source = "https://github.com/strawhatcfd/sootviz"
+
+[tool.setuptools.packages.find]
+include = ["sootviz*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

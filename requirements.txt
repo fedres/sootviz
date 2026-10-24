@@ -1,0 +1,6 @@
+numpy>=1.21
+scipy>=1.7
+matplotlib>=3.5
+pillow>=9.0
+# optional, only needed to read foils straight out of a PDF:
+# pymupdf>=1.21
