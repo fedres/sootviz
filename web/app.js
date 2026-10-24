@@ -52,8 +52,7 @@ $("run").addEventListener("click", () => {
     bytes,
     opts: {
       width: parseFloat($("w").value), height: parseFloat($("h").value),
-      unit: $("u").value, cell: parseFloat($("cell").value) || 0,
-      polarity: $("pol").value, equalise: parseFloat($("eq").value) || 2.5,
+      unit: $("u").value, polarity: $("pol").value, equalise: parseFloat($("eq").value) || 2.5,
       name: "your foil",
     },
     // structured-cloned, not transferred: the buffer stays usable here so the
@@ -93,8 +92,8 @@ function arrived(r) {
 $("no").addEventListener("click", () => {
   show("step-check", false); show("step-result", false);
   $("step-load").scrollIntoView({ behavior: "smooth", block: "start" });
-  hint("Try, in this order: set how the tracks appear; give an expected λ near "
-     + "the size you can see; raise the contrast window. Then measure again.");
+  hint("Try, in this order: set how the tracks appear (dark or bright), then "
+     + "raise the contrast window. Then measure again.");
   $("pol").focus();
 });
 

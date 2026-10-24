@@ -55,13 +55,13 @@ self.onmessage = async (ev) => {
 import json, base64
 from pathlib import Path
 from sootviz import load_foil, measure, write_report
+from sootviz.report import _json_safe
 from sootviz.measure import Config
 
 o = _opts.to_py() if hasattr(_opts, "to_py") else dict(_opts)
 foil = load_foil("/input_image", float(o["width"]), float(o["height"]),
                  o.get("unit", "mm"), name=o.get("name", "foil"))
 cfg = Config(
-    cell=float(o["cell"]) if o.get("cell") else None,
     polarity=o.get("polarity", "auto"),
     grid=not o.get("no_grid", False),
     equalise_frac=float(o.get("equalise", 2.5)),
@@ -73,7 +73,7 @@ figs = {k: base64.b64encode(Path(v).read_bytes()).decode()
         for k, v in written.items() if str(v).endswith(".png")}
 st = res.stats()
 blocks = res.per_block()
-json.dumps(dict(
+json.dumps(_json_safe(dict(
     figures=figs,
     median=st["median"], q1=st["q1"], q3=st["q3"], n=st["n"],
     mean=st["mean"], p5=st["p5"], p95=st["p95"],
@@ -91,7 +91,7 @@ json.dumps(dict(
     report=Path("/report/foil_result.json").read_text(),
     spacings=Path("/report/foil_spacings.csv").read_text(),
     blocks_csv=Path("/report/foil_blocks.csv").read_text(),
-))
+)), allow_nan=False)
 `);
     say("result", { json: res });
   } catch (e) {

@@ -161,3 +161,19 @@ def test_report_writes_the_diagnostics(tmp_path):
     spac = w["csv"].read_text().strip().splitlines()
     assert spac[0].endswith("family")
     assert len(spac) - 1 == len(r.lam)
+
+
+def test_result_json_is_strictly_valid(tmp_path):
+    """NaN is not JSON. A run given its scale has no scale search, so its
+    sensitivity is undefined -- and Python would write a bare NaN, which every
+    strict parser rejects, discarding the whole result rather than one field."""
+    import json
+    f = synth_foil(width=24, height=16, s=25, lam=2.4, skew=10)
+    r = measure(f, Config(cell=2.9, polarity="dark"))
+    assert not np.isfinite(r.scale_sensitivity()), "this test needs the NaN case"
+    text = write_report(r, tmp_path, prefix="j")["json"].read_text()
+    for token in ("NaN", "Infinity", "-Infinity"):
+        assert token not in text, f"{token} would break a strict JSON parser"
+    doc = json.loads(text)                      # strict by default in Python
+    assert doc["scale_sensitivity_percent"] is None
+    assert doc["stats"]["median"] > 0

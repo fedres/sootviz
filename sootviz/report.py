@@ -349,6 +349,27 @@ def fig_scale(res, out, dpi=170):
     return Path(out).with_suffix(".png")
 
 
+def _json_safe(o):
+    """NaN and infinity are not JSON.
+
+    Python writes them as bare NaN/Infinity, which every strict parser
+    rejects -- JavaScript's JSON.parse among them, so a single missing
+    statistic would discard the whole result. They become null instead, which
+    is what "not measured" means here: a record with one empty family has no
+    family agreement, and a run given its scale has no scale search to be
+    sensitive to.
+    """
+    if isinstance(o, dict):
+        return {k: _json_safe(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_json_safe(v) for v in o]
+    if isinstance(o, (float, np.floating)):
+        return float(o) if np.isfinite(o) else None
+    if isinstance(o, (int, np.integer)):
+        return int(o)
+    return o
+
+
 def write_report(res, outdir, reference=None, prefix=None):
     """All figures and data for one record. Returns the paths written."""
     outdir = Path(outdir); outdir.mkdir(parents=True, exist_ok=True)
@@ -379,7 +400,8 @@ def write_report(res, outdir, reference=None, prefix=None):
                family_medians=[float(np.median(res.lam1)) if len(res.lam1) else None,
                                float(np.median(res.lam2)) if len(res.lam2) else None],
                blocks=blocks)
-    (outdir / f"{p}_result.json").write_text(json.dumps(doc, indent=1))
+    (outdir / f"{p}_result.json").write_text(
+        json.dumps(_json_safe(doc), indent=1, allow_nan=False))
     u = res.foil.unit
     fam = np.concatenate([np.ones(len(res.lam1)), 2 * np.ones(len(res.lam2))])
     tab = np.column_stack([res.lam, res.lam_x, fam]) \
