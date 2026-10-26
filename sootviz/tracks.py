@@ -39,7 +39,9 @@ def ridge_map(clean_img: np.ndarray, s: float, cell: float,
     r = coarse - fine if polarity == "dark" else fine - coarse
     r = np.clip(r, 0, None)
     m = r.max()
-    return r / m if m > 0 else r
+    # float32 halves the filter bank, which is the largest thing in the
+    # pipeline; the extra precision buys nothing on image data
+    return (r / m if m > 0 else r).astype(np.float32)
 
 
 def oriented(R: np.ndarray, deg: float, s: float, cell: float,
@@ -145,7 +147,8 @@ def blend(resp, angles, blocks, shape, s, band=10.0,
     """Blend the per-block family responses into two continuous fields."""
     ny, nx = shape
     X, Y = np.meshgrid(np.arange(nx) / s, np.arange(ny) / s)
-    F1 = np.zeros(shape); F2 = np.zeros(shape); W = np.zeros(shape)
+    F1 = np.zeros(shape, np.float32); F2 = np.zeros(shape, np.float32)
+    W = np.zeros(shape, np.float32)
     for b, (xc, yc, bw, bh) in blocks:
         if b is None:
             continue

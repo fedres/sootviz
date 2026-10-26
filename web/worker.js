@@ -80,6 +80,7 @@ json.dumps(_json_safe(dict(
     unit=foil.unit, cells_across=res.cells_across(),
     family_agreement=res.family_agreement(), coherence=res.coherence,
     sensitivity=res.scale_sensitivity(), polarity=res.polarity,
+    alignment=res.alignment(), on_track=res.on_track(),
     blocks=len([b for b, _ in res.blocks if b is not None]),
     cell_scale=res.cell,
     blocks_table=blocks,

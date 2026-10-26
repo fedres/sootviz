@@ -43,10 +43,10 @@ so the page stays responsive, and show the per-stage progress the CLI prints.
 
 The measurement can fail quietly: if the two families are misread, the number
 is still produced and still looks plausible. So the page must not hand over a
-number before the user has seen the contours lying on the tracks.
+number before the user has seen the measured crossings lying on the tracks.
 
 Flow: drop image -> enter the physical extent -> measure -> **the verification
-figure, full width, with "do the contours follow the tracks?"** -> on "no",
+figure, full width, with "do the marks lie along the tracks?"** -> on "no",
 the controls that matter (polarity, expected cell width, contrast window,
 exclusion bands) with a short note on what each one does -> on "yes", the
 number, the distribution, and the downloadable CSV/JSON.

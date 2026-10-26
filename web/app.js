@@ -115,6 +115,7 @@ $("yes").addEventListener("click", () => {
     ["cuts counted along", r.cuts || "—"],
     ["cells across the height", sig(r.cells_across, 2)],
     ["families agree to", `${Math.round(r.family_agreement)} %`],
+    ["crossings on ridges", isFinite(r.alignment) ? `${Math.round(r.alignment)}ᵗʰ pct` : "—"],
     ["scale sensitivity", isFinite(r.sensitivity) ? `${Math.round(r.sensitivity)} %` : "—"],
     ["coherence", sig(r.coherence, 2)],
     ["tracks read as", r.polarity],
@@ -134,9 +135,16 @@ $("yes").addEventListener("click", () => {
     flags.push([`The answer moves ${Math.round(r.sensitivity)} % across`
       + " neighbouring scales, so this record has no single cell width. That is"
       + " physics, not a fault: quote the distribution and the scale together.", ""]);
+  if (isFinite(r.alignment) && r.alignment < 70)
+    flags.push([`The measured crossings sit at the ${Math.round(r.alignment)}ᵗʰ`
+      + " percentile of ridge strength, where 50 would be chance. That is too"
+      + " close to chance: the cuts are not finding the soot tracks, so the"
+      + " number is not a measurement of this record.", "bad"]);
   if (!flags.length)
-    flags.push(["Both internal checks are clean: the families agree and the"
-      + " answer sits on a plateau in scale.", "ok"]);
+    flags.push([`All three internal checks are clean: the families agree, the`
+      + ` crossings sit at the ${Math.round(r.alignment)}ᵗʰ percentile of ridge`
+      + ` strength (50 = chance, so they are on the tracks), and the answer`
+      + ` sits on a plateau in scale.`, "ok"]);
   $("flags").innerHTML = flags.map(([t, k]) =>
     `<div class="flag ${k === "ok" ? "" : k}" ${k === "ok" ? 'style="border-left-color:var(--ok)"' : ""}>${t}</div>`).join("");
 

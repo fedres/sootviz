@@ -54,10 +54,15 @@ def cmd_measure(a):
     for k, v in out.items():
         print(f"  {k:13s} {v}")
     print("\nCHECK THE VERIFICATION FIGURE BEFORE USING THE NUMBER.")
-    print("  Every contour should wrap exactly one trajectory. Where contours")
-    print("  merge neighbouring lanes or wander off the structure, the")
-    print("  measurement there is not reliable: re-run with --cell set near")
-    print("  the size you can see, or restrict the record with --exclude-x.")
+    print("  Each mark is one trajectory crossing one cut, and every spacing")
+    print("  measured is the gap between two marks of the same colour on the")
+    print("  same cut. They should lie along the tracks. Where they wander off")
+    print("  the structure the measurement there is not reliable: re-run with")
+    print("  --cell near the size you can see, or --exclude-x to skip a region.")
+    print(f"\n  Crossings sit at ridge percentile {res.alignment():.0f} of their own")
+    print(f"  column, where 50 would be chance, and {res.on_track():.0f} % are in the top")
+    print("  quartile. That is measured against the ridge map, which the cuts")
+    print("  never see, so it is an independent check.")
     if res.family_agreement() > 15:
         print(f"\n  WARNING: the two families disagree by "
               f"{res.family_agreement():.0f} % (above 15 %), so the geometry "

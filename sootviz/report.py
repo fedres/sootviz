@@ -22,19 +22,44 @@ def _mpl():
     return plt
 
 
-def fig_families(res, out, strips=None, level=1.25, dpi=170):
-    """THE VERIFICATION FIGURE. Every contour should wrap exactly one
-    trajectory; where contours merge lanes or wander off the structure, the
-    measurement in that region is not to be trusted."""
+def _crossings(res, fam):
+    """The measured crossings of one family, as flat x and y arrays."""
+    cuts = res.cuts1 if fam == 1 else res.cuts2
+    xs, ys = [], []
+    for x, pks in cuts or []:
+        xs.extend([x] * len(pks))
+        ys.extend(list(pks))
+    return np.asarray(xs), np.asarray(ys)
+
+
+def _draw_crossings(ax, res, xlim=None, ms=2.0):
+    for fam, col in ((1, RED), (2, BLUE)):
+        x, y = _crossings(res, fam)
+        if not len(x):
+            continue
+        if xlim is not None:
+            m = (x >= xlim[0]) & (x <= xlim[1])
+            x, y = x[m], y[m]
+        ax.plot(x, y, "o", color=col, ms=ms, mec="none", alpha=0.85)
+
+
+def fig_families(res, out, strips=None, dpi=170):
+    """THE VERIFICATION FIGURE: what was measured, drawn on the record.
+
+    Each mark is one trajectory crossing a vertical cut, red for one family
+    and blue for the other, and every number in the histogram is the gap
+    between two marks of the same colour on the same cut. So this shows the
+    measurement itself rather than a rendering of it -- the marks should lie
+    along the soot tracks and string out into lines following them.
+
+    Contours were drawn here previously. They were a level set of the family
+    field, which is NOT what the measurement uses: the cuts find peaks with a
+    threshold set per column, so on a messy record a single level closed into
+    blobs while the peaks it was supposed to depict stayed on the tracks. The
+    figure looked wrong about a measurement that was right.
+    """
     plt = _mpl()
     f = res.foil
-    sa = res.s or f.s
-    N1 = local_normalise(res.F1, sa, res.cell)
-    N2 = local_normalise(res.F2, sa, res.cell)
-    # the fields live on the analysis raster, which need not be the input
-    # raster, so the axes come from the field itself
-    X = np.linspace(0, f.width, N1.shape[1])
-    Y = np.linspace(0, f.height, N1.shape[0])
     if strips is None:
         n = max(1, int(round((f.width / f.height) / 2.2)))
         edges = np.linspace(0, f.width, n + 1)
@@ -45,59 +70,37 @@ def fig_families(res, out, strips=None, level=1.25, dpi=170):
     for ax, (xa, xb) in zip(axes[:, 0], strips):
         ax.imshow(res.clean, cmap="gray", extent=f.extent, aspect="equal",
                   interpolation="lanczos", vmin=-2, vmax=2)
-        ax.contour(X, Y, N1, levels=[level], colors=RED, linewidths=0.8)
-        ax.contour(X, Y, N2, levels=[level], colors=BLUE, linewidths=0.8)
+        _draw_crossings(ax, res, xlim=(xa, xb))
         ax.set_xlim(xa, xb); ax.set_ylim(f.height, 0)
         ax.set_ylabel(f"y [{f.unit}]"); ax.tick_params(labelsize=7)
     axes[-1, 0].set_xlabel(f"x [{f.unit}]")
     axes[0, 0].set_title(
-        f"{f.name}: track families (red/blue) over the cleaned record — "
-        f"each contour should wrap one trajectory", fontsize=9, loc="left")
+        f"{f.name}: the measured trajectory crossings, red and blue for the "
+        f"two families — they should lie along the tracks "
+        f"(ridge percentile {res.alignment():.0f}, 50 = chance)",
+        fontsize=9, loc="left")
     fig.savefig(Path(out).with_suffix(".png"), dpi=dpi)
     plt.close(fig)
     return Path(out).with_suffix(".png")
 
 
-def fig_overview(res, out, level=1.25, dpi=200):
-    """The whole record in one panel, contours blended across all blocks."""
+def fig_overview(res, out, dpi=200):
+    """The whole record in one panel, every measured crossing on it."""
     plt = _mpl()
     f = res.foil
-    sa = res.s or f.s
-    N1 = local_normalise(res.F1, sa, res.cell)
-    N2 = local_normalise(res.F2, sa, res.cell)
-    # the fields live on the analysis raster, which need not be the input
-    # raster, so the axes come from the field itself
-    X = np.linspace(0, f.width, N1.shape[1])
-    Y = np.linspace(0, f.height, N1.shape[0])
     h = max(2.2, 13 * f.height / f.width + 0.9)
     fig, ax = plt.subplots(figsize=(13, h))
     ax.imshow(res.clean, cmap="gray", extent=f.extent, aspect="equal",
               interpolation="lanczos", vmin=-2, vmax=2)
-    ax.contour(X, Y, N1, levels=[level], colors=RED, linewidths=0.6)
-    ax.contour(X, Y, N2, levels=[level], colors=BLUE, linewidths=0.6)
+    _draw_crossings(ax, res, ms=1.6)
     ax.set_xlabel(f"x [{f.unit}]"); ax.set_ylabel(f"y [{f.unit}]")
     ax.set_title(f"{f.name}: {f.width:g} x {f.height:g} {f.unit}, "
-                 f"lambda = {res.median:.3g} {f.unit}", fontsize=9, loc="left")
+                 f"lambda = {res.median:.3g} {f.unit} from "
+                 f"{len(res.lam)} spacings between these marks",
+                 fontsize=9, loc="left")
     fig.savefig(Path(out).with_suffix(".png"), dpi=dpi)
     plt.close(fig)
     return Path(out).with_suffix(".png")
-
-
-def _bands(reference):
-    """Normalise whatever a caller passed as a reference into drawable bands."""
-    if reference is None:
-        return []
-    if isinstance(reference, (int, float)):
-        return [(float(reference), float(reference), "reference", BLUE)]
-    if (isinstance(reference, (tuple, list)) and len(reference) == 2
-            and all(isinstance(v, (int, float)) for v in reference)):
-        return [(float(reference[0]), float(reference[1]), "reference", BLUE)]
-    out = []
-    for item in reference:
-        (lo, hi), lab, col = item
-        out.append((float(lo), float(hi), lab, col))
-    return out
-
 
 
 def _fields(res):
@@ -139,7 +142,7 @@ def fig_clean(res, out, dpi=170):
     return Path(out).with_suffix(".png")
 
 
-def fig_blocks(res, out, level=1.25, max_panels=16, dpi=160):
+def fig_blocks(res, out, max_panels=16, dpi=160):
     """The record as it was actually analysed: block by block.
 
     Each block supplies its OWN pair of family angles, because the pattern
@@ -150,7 +153,6 @@ def fig_blocks(res, out, level=1.25, max_panels=16, dpi=160):
     """
     plt = _mpl()
     f, sa = res.foil, (res.s or res.foil.s)
-    N1, N2, X, Y = _fields(res)
     rows = [(b, box) for b, box in res.blocks if b is not None]
     if not rows:
         return None
@@ -174,10 +176,7 @@ def fig_blocks(res, out, level=1.25, max_panels=16, dpi=160):
         ax.imshow(res.clean[i0:i1, j0:j1], cmap="gray",
                   extent=(x0, x1, y1, y0), aspect="equal",
                   interpolation="lanczos", vmin=-2, vmax=2)
-        ax.contour(X[j0:j1], Y[i0:i1], N1[i0:i1, j0:j1], levels=[level],
-                   colors=RED, linewidths=0.7)
-        ax.contour(X[j0:j1], Y[i0:i1], N2[i0:i1, j0:j1], levels=[level],
-                   colors=BLUE, linewidths=0.7)
+        _draw_crossings(ax, res, xlim=(x0, x1), ms=2.6)
         lam = f"{b.lam:.3g}" if np.isfinite(b.lam) else "--"
         ax.set_title(f"x = {xc:.3g} {f.unit}\n"
                      f"$\\lambda$ = {lam}, n = {b.n}\n"
@@ -246,6 +245,22 @@ def fig_counting(res, out, n_cuts=9, dpi=180):
     fig.savefig(Path(out).with_suffix(".png"), dpi=dpi)
     plt.close(fig)
     return Path(out).with_suffix(".png")
+
+
+def _bands(reference):
+    """Normalise whatever a caller passed as a reference into drawable bands."""
+    if reference is None:
+        return []
+    if isinstance(reference, (int, float)):
+        return [(float(reference), float(reference), "reference", BLUE)]
+    if (isinstance(reference, (tuple, list)) and len(reference) == 2
+            and all(isinstance(v, (int, float)) for v in reference)):
+        return [(float(reference[0]), float(reference[1]), "reference", BLUE)]
+    out = []
+    for item in reference:
+        (lo, hi), lab, col = item
+        out.append((float(lo), float(hi), lab, col))
+    return out
 
 
 def fig_distribution(res, out, reference=None, dpi=170):
@@ -397,6 +412,8 @@ def write_report(res, outdir, reference=None, prefix=None):
                family_agreement_percent=res.family_agreement(),
                cells_across_height=res.cells_across(),
                scale_sensitivity_percent=res.scale_sensitivity(),
+               ridge_percentile_at_crossings=res.alignment(),
+               crossings_in_top_quartile_percent=res.on_track(),
                family_medians=[float(np.median(res.lam1)) if len(res.lam1) else None,
                                float(np.median(res.lam2)) if len(res.lam2) else None],
                blocks=blocks)

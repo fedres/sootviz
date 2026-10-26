@@ -83,6 +83,8 @@ class Result:
     # x of every spacing, so the distribution can be split by block
     lam1_x: np.ndarray = field(repr=False, default=None)
     lam2_x: np.ndarray = field(repr=False, default=None)
+    ridge: np.ndarray = field(repr=False, default=None)
+    align: np.ndarray = field(repr=False, default=None)
 
     @property
     def lam_x(self):
@@ -148,6 +150,25 @@ class Result:
             return float("nan")
         return float(100 * (max(near) - min(near)) / np.median(near))
 
+    def alignment(self):
+        """How well the measured crossings sit on actual soot tracks.
+
+        Returns the median percentile rank of ridge strength at the crossings,
+        where 50 would be chance. Around 90 is a clean record; the high
+        seventies and above still means the measurement is following the
+        record. Low values mean the filters are finding their own structure
+        and the number should not be used.
+        """
+        if self.align is None or not len(self.align):
+            return float("nan")
+        return float(100 * np.median(self.align))
+
+    def on_track(self, q=0.75):
+        """Fraction of crossings in the top quartile of their column."""
+        if self.align is None or not len(self.align):
+            return float("nan")
+        return float(100 * (self.align > q).mean())
+
     def cells_across(self):
         return self.foil.height / self.median
 
@@ -160,6 +181,9 @@ class Result:
                 f"[IQR {st['q1']:.3g}-{st['q3']:.3g}, n={st['n']}]\n"
                 f"  {self.cells_across():.1f} cells across the "
                 f"{self.foil.height:g} {u} height\n"
+                f"  crossings sit at ridge percentile "
+                f"{self.alignment():.0f} (50 = chance), "
+                f"{self.on_track():.0f} % in the top quartile\n"
                 f"  families agree to {self.family_agreement():.0f} %, "
                 f"coherence {self.coherence:.2f}, polarity '{self.polarity}', "
                 f"{len(self.blocks)} block(s)"
@@ -203,13 +227,42 @@ def _spacings(F, foil: Foil, cfg: Config, cell: float, region=None,
     return np.asarray(out)
 
 
-def _decimate(foil: Foil, cell: float, px_per_cell: float) -> Foil:
-    """Resample so that one cell spans about `px_per_cell` pixels."""
-    k = int(foil.px(cell) / px_per_cell)
-    if k < 2:
+def _decimate(foil: Foil, cell: float, px_per_cell: float,
+              max_px: float = 1.5e6) -> Foil:
+    """Resample to the resolution the filters are designed for.
+
+    Every filter is a fraction of a cell, so what matters is how many pixels a
+    cell spans, not how many pixels the record has. Two things go wrong when
+    that is left to chance.
+
+    Too few, and the cross-track filter -- 0.017 of a cell, the thing that
+    selects a thin track and rejects everything else -- falls below a pixel
+    and stops filtering. A record whose cells span 45 px gives it 0.8 px: it
+    cannot reject noise, the family fields come out ragged, and the two
+    families disagree about a record they should agree on. Resampling such a
+    record up to the canonical resolution adds no information, but it lets the
+    designed filter exist, and on a photographed plate it took the two
+    families from 19 % apart to 2 %.
+
+    Too many is only cost -- and worse, the bank holds one response per angle
+    over the whole frame, so an innocent 3 Mpx photograph at 29 angles wants
+    more memory than a browser tab will give, which is how a large record
+    fails with a memory error rather than a message. `max_px` bounds the frame
+    whatever is dropped on it.
+
+    Because the analysis always happens at the same cells-per-pixel, the same
+    record measured from a small scan and a large one gives the same answer.
+    """
+    ny, nx = foil.image.shape
+    want = px_per_cell / max(1.0, foil.px(cell))
+    budget = float(np.sqrt(max_px / max(1.0, ny * nx)))
+    z = min(want, budget)
+    if 0.95 < z < 1.05:
         return foil
-    img = ndi.uniform_filter(foil.image, k)[::k, ::k]   # mean, then take
-    return Foil(img, foil.s / k, foil.width, foil.height, foil.unit, foil.name)
+    img = ndi.gaussian_filter(foil.image, 0.5 / z) if z < 1 else foil.image
+    img = ndi.zoom(img, z, order=3)
+    return Foil(img, img.shape[1] / foil.width, foil.width, foil.height,
+                foil.unit, foil.name)
 
 
 def _once(foil: Foil, cfg: Config, cell: float, polarity: str,
@@ -264,10 +317,30 @@ def _once(foil: Foil, cfg: Config, cell: float, polarity: str,
             b.lam = float(np.median(lall[m])) if m.any() else float("nan")
             b.n = int(m.sum())
 
+    # Does each crossing we measured actually sit on a soot track? For every
+    # crossing, the percentile rank of the ridge strength at that point within
+    # its own column. 50 is chance; a measurement that is following the record
+    # rather than its own filters scores far above that. This is checked
+    # against the ridge map, which the cuts never see -- they are taken on the
+    # oriented family fields -- so it is an independent check and not a
+    # restatement of how the peaks were chosen.
+    align = []
+    for cuts in ((cuts1 or []), (cuts2 or [])):
+        for xq, pks in cuts:
+            j = int(round(xq * s))
+            if not (0 <= j < nx) or not len(pks):
+                continue
+            col = R[:, j]
+            for yq in pks:
+                i = int(round(yq * s))
+                if 0 <= i < ny:
+                    align.append(float((col < col[i]).mean()))
+
     lam = np.asarray(lam1 + lam2)
     goodb = [b for b, _ in blocks if b is not None]
     coherence = float(np.median([b.score for b in goodb])) if goodb else 0.0
     return dict(clean=cl, s=s, lam=lam, cuts1=cuts1, cuts2=cuts2,
+                ridge=R, align=np.asarray(align),
                 lam1_x=x1, lam2_x=x2, lam1=np.asarray(lam1), lam2=np.asarray(lam2),
                 blocks=blocks, coherence=coherence, F1=F1, F2=F2)
 
@@ -344,6 +417,17 @@ def measure(foil: Foil, cfg: Config | None = None, verbose: bool = False) -> Res
     """Measure the cell width, choosing the scale and the polarity if needed."""
     cfg = cfg or Config()
 
+    # A record with no contrast has no measurement in it, and must say so
+    # rather than produce one. The pipeline normalises the ridge map by its own
+    # maximum, so without this guard the floating-point round-off left by
+    # resampling a flat image is amplified to full scale and then measured:
+    # a blank frame came back as a confident 1.88 mm.
+    img = foil.image
+    if float(np.ptp(img)) <= 1e-6 * max(1.0, float(np.abs(img).max())):
+        raise RuntimeError("the image has no contrast: every pixel is "
+                           "effectively the same value, so there is nothing "
+                           "to measure")
+
     pol = cfg.polarity
     if pol == "auto":
         pol, sc = _polarity(foil, cfg, cfg.cell or foil.height / 8.0)
@@ -371,4 +455,5 @@ def measure(foil: Foil, cfg: Config | None = None, verbose: bool = False) -> Res
                   F1=out["F1"], F2=out["F2"],
                   lam1=out["lam1"], lam2=out["lam2"], ladder=ladder,
                   cuts1=out["cuts1"] or [], cuts2=out["cuts2"] or [],
+                  ridge=out["ridge"], align=out["align"],
                   lam1_x=out["lam1_x"], lam2_x=out["lam2_x"])

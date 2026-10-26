@@ -80,13 +80,16 @@
   <p>
     This is the part that matters. The measurement can fail quietly: if the two
     families of trajectories are misread, a number still comes out and still
-    looks plausible. So look at the overlay — <strong>each contour should wrap
-    one trajectory</strong>, red for one family and blue for the other, and the
-    contours should follow the tracks rather than cut across them.
+    looks plausible. So look at the overlay. <strong>Each mark is one
+    trajectory crossing a vertical cut</strong> — red for one family, blue for
+    the other — and every number in the histogram is the gap between two marks
+    of the same colour on the same cut. The marks should lie along the soot
+    tracks and string out into lines following them. This is the measurement
+    itself, not a drawing of it.
   </p>
-  <figure><img id="fig-verify" alt="track families drawn over the cleaned record"><figcaption>Verification overlay — the whole record, contours blended across blocks.</figcaption></figure>
+  <figure><img id="fig-verify" alt="track families drawn over the cleaned record"><figcaption>Verification overlay — every measured crossing, over the whole record.</figcaption></figure>
   <div class="gate">
-    <p><strong>Do the contours follow the tracks?</strong></p>
+    <p><strong>Do the marks lie along the tracks?</strong></p>
     <div class="row" style="margin:0">
       <button class="yes" id="yes">Yes — show the result</button>
       <button class="no" id="no">No — let me adjust</button>
@@ -142,8 +145,9 @@
 
   <h3>Recombined over the whole record</h3>
   <p style="font-size:13.5px;color:var(--dim)">
-    The per-block fields blended with a partition of unity, which is why the
-    contours stay continuous across the joins rather than breaking at them.
+    The per-block fields are blended with a partition of unity before the cuts
+    are taken, so a trajectory crossing a block boundary is still one
+    trajectory rather than two that stop at the join.
   </p>
   <figure><img id="fig-overview" alt="families over the whole record"></figure>
 
@@ -191,17 +195,31 @@
 
 <h3>Synthetic foils — the only place truth is known exactly</h3>
 <table>
-  <tr><th>case</th><th class="num-col">true λ</th><th class="num-col">measured</th><th class="num-col">error</th><th class="num-col">families</th></tr>
-  <tr><td>regular</td><td class="num-col">2.50 mm</td><td class="num-col">2.48</td><td class="num-col">−0.8 %</td><td class="num-col">0 %</td></tr>
-  <tr><td>sheared (asymmetric families)</td><td class="num-col">2.50 mm</td><td class="num-col">2.48</td><td class="num-col">−0.8 %</td><td class="num-col">2 %</td></tr>
-  <tr><td>irregular (0.20 λ jitter)</td><td class="num-col">2.00 mm</td><td class="num-col">1.88</td><td class="num-col">−6.0 %</td><td class="num-col">0 %</td></tr>
-  <tr><td>noisy, low contrast</td><td class="num-col">3.00 mm</td><td class="num-col">2.52</td><td class="num-col">−16.0 %</td><td class="num-col">6 %</td></tr>
+  <tr><th>case</th><th class="num-col">true λ</th><th class="num-col">measured</th><th class="num-col">error</th><th class="num-col">families</th><th class="num-col">alignment</th></tr>
+  <tr><td>regular</td><td class="num-col">2.50 mm</td><td class="num-col">2.49</td><td class="num-col">−0.3 %</td><td class="num-col">1 %</td><td class="num-col">93</td></tr>
+  <tr><td>sheared (asymmetric families)</td><td class="num-col">2.50 mm</td><td class="num-col">2.49</td><td class="num-col">−0.3 %</td><td class="num-col">1 %</td><td class="num-col">92</td></tr>
+  <tr><td>irregular (0.20 λ jitter)</td><td class="num-col">2.00 mm</td><td class="num-col">1.93</td><td class="num-col">−3.7 %</td><td class="num-col">0 %</td><td class="num-col">89</td></tr>
+  <tr><td>noisy, low contrast</td><td class="num-col">3.00 mm</td><td class="num-col">2.55</td><td class="num-col">−15.0 %</td><td class="num-col">2 %</td><td class="num-col">90</td></tr>
+</table>
+
+<h3>The same lattice, degraded the way real plates are</h3>
+<p style="font-size:14px">A known 3.00 mm lattice, each defect applied on its own:</p>
+<table>
+  <tr><th>degradation</th><th class="num-col">measured</th><th class="num-col">error</th><th class="num-col">alignment</th><th class="num-col">families</th></tr>
+  <tr><td>clean</td><td class="num-col">3.01 mm</td><td class="num-col">+0.4 %</td><td class="num-col">93</td><td class="num-col">0 %</td></tr>
+  <tr><td>uneven lighting (strong vignette)</td><td class="num-col">3.01 mm</td><td class="num-col">+0.4 %</td><td class="num-col">92</td><td class="num-col">1 %</td></tr>
+  <tr><td>heavy soot grain</td><td class="num-col">2.98 mm</td><td class="num-col">−0.8 %</td><td class="num-col">91</td><td class="num-col">0 %</td></tr>
+  <tr><td>faint tracks (0.22 contrast)</td><td class="num-col">3.01 mm</td><td class="num-col">+0.4 %</td><td class="num-col">93</td><td class="num-col">0 %</td></tr>
+  <tr><td>irregular front (0.30 λ jitter)</td><td class="num-col">2.83 mm</td><td class="num-col">−5.5 %</td><td class="num-col">89</td><td class="num-col">1 %</td></tr>
+  <tr><td>all of them at once</td><td class="num-col">2.52 mm</td><td class="num-col">−16.0 %</td><td class="num-col">90</td><td class="num-col">12 %</td></tr>
 </table>
 <p style="font-size:13.5px;color:var(--dim)">
-  The last row is the documented limit, not a hidden one: heavy noise at low
-  contrast shortens the plateau and costs about 15 %. A real record in that
-  state reports a high scale sensitivity, which is the signal to quote a
-  distribution rather than a number.
+  Lighting, grain and faint contrast cost essentially nothing on their own —
+  that is what the cleaning stage is for. Only genuine irregularity moves the
+  answer, and only every defect at once costs more than a few per cent. Note
+  that <strong>alignment stays near 90 throughout</strong>: even where the
+  answer drifts, the measurement is still following the record rather than
+  inventing structure.
 </p>
 
 <h3>Published foils — measured from the authors' own figures</h3>
@@ -216,9 +234,9 @@
 </p>
 <table>
   <tr><th>panel</th><th class="num-col">SootViz</th><th class="num-col">IQR</th><th>in reported range</th></tr>
-  <tr><td>single-step</td><td class="num-col">2.07 mm</td><td class="num-col">1.50–2.74</td><td>yes</td></tr>
-  <tr><td>three-step chain-branching</td><td class="num-col">1.28 mm</td><td class="num-col">0.93–1.72</td><td>yes</td></tr>
-  <tr><td>detailed</td><td class="num-col">0.93 mm</td><td class="num-col">0.71–1.19</td><td>yes</td></tr>
+  <tr><td>single-step</td><td class="num-col">2.02 mm</td><td class="num-col">1.49–2.64</td><td>yes</td></tr>
+  <tr><td>three-step chain-branching</td><td class="num-col">1.22 mm</td><td class="num-col">0.88–1.66</td><td>yes</td></tr>
+  <tr><td>detailed</td><td class="num-col">0.88 mm</td><td class="num-col">0.66–1.16</td><td>yes</td></tr>
 </table>
 <p style="font-size:13.5px;color:var(--dim)">
   Ordering single-step ≥ three-step ≥ detailed is reproduced, and the two
@@ -228,13 +246,17 @@
 
 <h3>Real records</h3>
 <p style="font-size:14px">
-  A numerical foil from our own solver, 30 × 20 mm: λ = <strong>2.35 mm</strong>,
-  IQR 1.79–3.06, families agree to 10 %, scale sensitivity 6 %.
+  A numerical foil from our own solver, 30 × 20 mm: λ = <strong>2.39 mm</strong>,
+  IQR 1.79–3.10, families agree to 11 %, alignment 90.
   A photographed experimental plate, 5 m × 1 m, where the pattern turns along the
-  record: λ = <strong>0.162 m</strong> over 13 blocks, with family angles
-  swinging from +35°…+65° to −65°…−45°. That plate is the instructive one — the
-  families disagree by 19 % and the scale sensitivity is 23 %, so SootViz
-  <em>warns on both counts</em> instead of handing over a clean-looking number.
+  record: λ = <strong>0.181 m</strong> over 13 blocks, with family angles
+  swinging from +35°…+65° to −65°…−45°. There the families agree to 2 % and the
+  crossings sit at the 83rd percentile of ridge strength, but the scale
+  sensitivity is 23 % — that record genuinely has no single cell width, and its
+  histogram is visibly <em>bimodal</em>. Measuring the same plate from a 16×
+  larger scan gives 0.184 m: the analysis always happens at the same
+  cells-per-pixel, so the answer does not depend on how finely a record was
+  scanned.
 </p>
 
 <!-- citation ─────────────────────────────────────────────────────── -->

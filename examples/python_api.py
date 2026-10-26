@@ -17,8 +17,9 @@ foil = synth_foil(width=40, height=25, s=25, lam=3.0, skew=10, jitter=0.12)
 res = measure(foil, Config(), verbose=True)
 print(res.summary())
 
-# LOOK AT THIS FIGURE before using the number: the contours must lie along the
-# tracks, one colour per family. Everything else follows from that being right.
+# LOOK AT THIS FIGURE before using the number: each mark is one trajectory
+# crossing one cut, and every spacing measured is the gap between two marks of
+# the same colour. They must lie along the tracks.
 out = write_report(res, Path("sootviz_out"), reference=3.0, prefix="example")
 for role, path in out.items():
     print(f"  {role:13s} {path}")

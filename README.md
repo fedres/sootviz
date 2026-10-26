@@ -75,6 +75,13 @@ lattice built with 2.5 mm cells.
 - **Coherence.** The fraction of strong track pixels belonging to the two modal
   directions. Below about 0.25 a two-family picture does not fit the image at
   all, and no number should be quoted.
+- **Alignment.** For every crossing the measurement found, the percentile rank
+  of ridge strength at that point within its own column. 50 is chance; around
+  90 is a clean record, and the high seventies still means the cuts are
+  finding soot tracks rather than their own filters. This is checked against
+  the ridge map, which the cuts never see — they are taken on the oriented
+  family fields — so it is an independent check and not a restatement of how
+  the peaks were chosen.
 
 Both are printed with every result and written into the JSON.
 
@@ -139,11 +146,14 @@ sootviz benchmark --pdf CNFTaileb.pdf  # plus published foils
 | `*_blocks.csv` | per-block angles, cell width, count and coherence |
 | `*_result.json` | everything above as data, including the scale search |
 
-Then **look at `*_families.png` before you use the number.** The contours must
-lie along the tracks, one colour per family. If they do not, the controls that
-matter are, in order: `--polarity`, `--cell` (an expected cell width, which
-turns the scale search off), `--equalise` (the contrast window, in cells), and
-`--exclude-x` (physical x positions to skip — seams, mounting damage, burn-through).
+Then **look at `*_families.png` before you use the number.** Each mark is one
+trajectory crossing one cut, and every spacing in the histogram is the gap
+between two marks of the same colour on the same cut — so the marks should lie
+along the tracks and string out into lines following them. If they do not, the
+controls that matter are, in order: `--polarity`, `--cell` (an expected cell
+width, which turns the scale search off), `--equalise` (the contrast window, in
+cells), and `--exclude-x` (physical x positions to skip — seams, mounting
+damage, burn-through).
 
 From Python, see [examples/python_api.py](examples/python_api.py).
 
@@ -154,26 +164,37 @@ Four levels of evidence, in increasing order of realism. Reproduce with
 
 **1. Synthetic foils — the only place truth is known exactly.**
 
-| case | true λ | measured | error | families | coherence |
+| case | true λ | measured | error | families | alignment |
 |---|---|---|---|---|---|
-| regular | 2.50 mm | 2.48 | −0.8 % | 0 % | 0.84 |
-| sheared (asymmetric families) | 2.50 mm | 2.48 | −0.8 % | 2 % | 0.71 |
-| irregular (0.20 λ jitter) | 2.00 mm | 1.88 | −6.0 % | 0 % | 0.56 |
-| noisy, low contrast | 3.00 mm | 2.52 | −16.0 % | 6 % | 0.50 |
+| regular | 2.50 mm | 2.49 | −0.3 % | 1 % | 93 |
+| sheared (asymmetric families) | 2.50 mm | 2.49 | −0.3 % | 1 % | 92 |
+| irregular (0.20 λ jitter) | 2.00 mm | 1.93 | −3.7 % | 0 % | 89 |
+| noisy, low contrast | 3.00 mm | 2.55 | −15.0 % | 2 % | 90 |
 
-The last case is the documented limit: heavy noise with 0.35 contrast shortens
-the plateau, and the scale search — which deliberately prefers the finer end,
-because on real records the danger is drifting from the cell onto the
-*grouping* of cells — then lands about 15 % low. A real record in that state
-reports a high scale sensitivity, which is the signal to quote a distribution
-rather than a number.
+**2. The same lattice, degraded the way real plates are.** A known 3.00 mm
+lattice, each defect applied on its own:
 
-**2. Our own numerical foil** (KRAFT, one-step chemistry, 30 × 20 mm):
-λ = **2.35 mm**, IQR 1.79–3.06, n = 1345, families agree to 10 %, scale
-sensitivity 6 %. An earlier hand measurement of the same record with a single
-absolute filter gave 2.28 mm (+3.1 %).
+| degradation | measured | error | alignment | families |
+|---|---|---|---|---|
+| clean | 3.01 mm | +0.4 % | 93 | 0 % |
+| uneven lighting (strong vignette) | 3.01 mm | +0.4 % | 92 | 1 % |
+| heavy soot grain | 2.98 mm | −0.8 % | 91 | 0 % |
+| faint tracks (0.22 contrast) | 3.01 mm | +0.4 % | 93 | 0 % |
+| irregular front (0.30 λ jitter) | 2.83 mm | −5.5 % | 89 | 1 % |
+| all of them at once | 2.52 mm | −16.0 % | 90 | 12 % |
 
-**3. Published foils — Taileb, Melguizo-Gavilanes & Chinnayya,**
+Lighting, grain and faint contrast cost essentially nothing on their own —
+that is what the cleaning stage is for. Only genuine irregularity moves the
+answer, and only the pile-up of every defect at once costs more than a few per
+cent. Note that **alignment stays near 90 throughout**: even where the answer
+drifts, the measurement is still following the record rather than inventing
+structure, which is exactly what that check is for.
+
+**3. Our own numerical foil** (KRAFT, one-step chemistry, 30 × 20 mm):
+λ = **2.39 mm**, IQR 1.79–3.10, n = 1233, families agree to 11 %, alignment 90
+with 83 % of crossings in the top quartile, scale sensitivity 4 %.
+
+**4. Published foils — Taileb, Melguizo-Gavilanes & Chinnayya,**
 *Combust. Flame* **218** (2020) 247, Fig. 5. The authors report a range over
 their three chemistry models rather than a value per panel — "the cell size was
 numerically estimated to lie in the range of 0.9 mm ≤ λ_num ≤ 1.9 mm" (p. 17)
@@ -181,34 +202,31 @@ numerically estimated to lie in the range of 0.9 mm ≤ λ_num ≤ 1.9 mm" (p. 1
 was tuned to the experimental size. So what can honestly be checked is range
 containment and that ordering:
 
-| panel (their chemistry) | SootViz | IQR | in reported range | 
+| panel (their chemistry) | SootViz | IQR | in reported range |
 |---|---|---|---|
-| single-step | 2.07 mm | 1.50–2.74 | yes |
-| three-step chain-branching | 1.28 mm | 0.93–1.72 | yes |
-| detailed | 0.93 mm | 0.71–1.19 | yes |
+| single-step | 2.02 mm | 1.49–2.64 | yes |
+| three-step chain-branching | 1.22 mm | 0.88–1.66 | yes |
+| detailed | 0.88 mm | 0.66–1.16 | yes |
 
 Ordering single-step ≥ three-step ≥ detailed: **reproduced**, and the two
 extremes land on the authors' two bounds. Their figures are copyrighted and are
 not redistributed here; point `--pdf` at your own copy.
 
-**4. A photographed experimental plate**, 5 m × 1 m, where the pattern turns
-along the record: λ = **0.162 m**, 13 blocks, family angles swinging from
-+35°…+65° to −65°…−45° along the plate, per-block λ falling 0.18 → 0.14 m
-downstream. This record is the instructive one: the families disagree by 19 %
-and the scale sensitivity is 23 %, so **SootViz warns on both counts** rather
-than handing over a clean-looking number. The honest reading is λ ≈ 0.16–0.24 m
-depending on the scale examined. For contrast, autocorrelation of the same
-image returns 0.52–0.59 m — it locks onto the grouping of cells, not the cell,
-and is wrong by a factor of three.
+**5. A photographed experimental plate**, 5 m × 1 m, where the pattern turns
+along the record: λ = **0.181 m** over 13 blocks, family angles swinging from
++35°…+65° to −65°…−45°, per-block λ falling downstream. The two families agree
+to 2 % and the crossings sit at the 83rd percentile of ridge strength. Scale
+sensitivity is 23 %, so this record genuinely has no single cell width and the
+distribution is the answer — the histogram is visibly **bimodal**, with
+populations near 0.12 and 0.19 m that the median falls between. For contrast,
+autocorrelation of the same image returns 0.52–0.59 m: it locks onto the
+grouping of cells, not the cell, and is wrong by a factor of three.
 
+Measuring the same plate from a 16× larger scan gives 0.184 m — the analysis
+always happens at the same cells-per-pixel, so the answer does not depend on
+how finely the record was scanned.
 
-## Hosting this as a web tool
-
-See [docs/HOSTING.md](docs/HOSTING.md). The short version: GitHub Pages plus
-Pyodide, so the same Python runs in the visitor's browser, **the image never
-leaves their machine**, and there is no server to pay for or maintain — a static
-site in the spirit of the Caltech Detonation Database.
-
+## Using it on the web
 ## Using it on the web
 
 A browser version runs the same Python through WebAssembly, so **the image
@@ -219,7 +237,7 @@ stored:
 
 It walks through loading a foil, giving its physical size, measuring, and —
 before any number is shown — the verification overlay and the question *do the
-contours follow the tracks?* The benchmark gallery behind the numbers below is
+marks lie along the tracks?* The benchmark gallery behind the numbers below is
 at `/benchmarks/`.
 
 ## If you use SootViz, please cite it

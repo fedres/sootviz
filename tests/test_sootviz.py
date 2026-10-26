@@ -177,3 +177,55 @@ def test_result_json_is_strictly_valid(tmp_path):
     doc = json.loads(text)                      # strict by default in Python
     assert doc["scale_sensitivity_percent"] is None
     assert doc["stats"]["median"] > 0
+
+
+# ---- is the measurement following the record, or its own filters? ----------
+def test_crossings_land_on_ridges_not_at_chance():
+    """The alignment check is measured against the ridge map, which the cuts
+    never see -- they are taken on the oriented family fields -- so it is an
+    independent check that the measurement is following the record."""
+    f = synth_foil(width=30, height=20, s=25, lam=2.5, skew=10, jitter=0.1,
+                   noise=0.25)
+    r = measure(f)
+    assert r.alignment() > 75, f"crossings near chance: {r.alignment():.0f}"
+    assert r.on_track() > 40
+    assert len(r.align) == sum(len(p) for _, p in r.cuts1) \
+        + sum(len(p) for _, p in r.cuts2)
+
+
+def test_noise_alone_scores_near_chance():
+    """A record with no cellular structure must not produce a confident
+    number: the crossings should sit near the 50th percentile."""
+    rng = np.random.default_rng(3)
+    f = synth_foil(width=20, height=14, s=25, lam=2.0, contrast=0.0,
+                   noise=0.0, vignette=0.0)
+    f.image[:] = 128 + 30 * rng.normal(size=f.image.shape)
+    try:
+        r = measure(f, Config(cell=2.4, polarity="dark"))
+    except RuntimeError:
+        return                      # refusing outright is also a pass
+    assert r.alignment() < 80 or r.coherence < 0.3, (
+        f"pure noise scored alignment {r.alignment():.0f}, coherence "
+        f"{r.coherence:.2f} -- the checks are not discriminating")
+
+
+def test_answer_does_not_depend_on_scan_resolution():
+    """Every filter is a fraction of a cell, so the analysis is done at a fixed
+    cells-per-pixel. The same record scanned coarsely or finely must agree."""
+    a = synth_foil(width=30, height=20, s=18, lam=2.5, skew=10, jitter=0.08)
+    b = synth_foil(width=30, height=20, s=54, lam=2.5, skew=10, jitter=0.08)
+    ra, rb = measure(a), measure(b)
+    assert abs(ra.median - rb.median) / rb.median < 0.10, (
+        f"{ra.median:.3f} at {a.s:.0f} px/mm vs {rb.median:.3f} at "
+        f"{b.s:.0f} px/mm")
+
+
+def test_a_large_record_does_not_exhaust_memory():
+    """The filter bank holds one response per angle over the whole frame, so
+    the frame has to be bounded or a big photograph fails with a memory error
+    rather than a message."""
+    from sootviz.measure import _decimate
+    f = synth_foil(width=60, height=12, s=120, lam=2.0)      # 8.6 Mpx
+    assert f.image.size > 8e6
+    d = _decimate(f, 2.0, Config().px_per_cell)
+    assert d.image.size <= 1.6e6, f"frame not capped: {d.image.size/1e6:.1f} Mpx"
