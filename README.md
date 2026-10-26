@@ -5,7 +5,10 @@ photographed — with the measurement you can check by eye before you trust it.
 
 *Karthik Thyagarajan · [Strawhat CFD](https://strawhatcfd.com)*
 
-**[Open the web version →](https://fedres.github.io/sootviz/)** — runs in your browser, your image never leaves your machine.
+**[Open the web version →](https://fedres.github.io/sootviz/)** — runs in your
+browser, your image never leaves your machine.
+**[See the benchmark gallery →](https://fedres.github.io/sootviz/benchmarks/)** —
+the figures behind every number below.
 
 ---
 
@@ -32,13 +35,19 @@ uses their agreement as an internal check.
 
 1. **Clean** — despeckle, then equalise the contrast over a window several
    cells wide. The window matters: equalising at the scale of a cell erases the
-   pattern you are trying to measure.
+   pattern you are trying to measure. It is chosen from the record, by trying
+   several and keeping the one whose two families come out most coherent.
 2. **Ridge map** — a difference of Gaussians, signed by whether tracks are dark
    (numerical foils, usually max-pressure plots) or bright (scoured soot).
-3. **Oriented filter bank** — line matched filters from −70° to +70°. Each
-   smooths along its own direction and not across it, so a trajectory responds
-   only to the filters aligned with it. The two modal angles are the two
-   families.
+   Which one is read from the record: trajectories are thin and what lies
+   between them is the wide interior of a cell, so the correct sign gives a
+   concentrated, heavy-tailed ridge map and the wrong one spreads its response
+   over the interiors. Nothing needs to be set by hand.
+3. **Oriented filter bank** — line matched filters from −70° to +70°, with
+   angles in image coordinates, so a positive angle is a line that descends to
+   the right as you look at it. Each smooths along its own direction and not
+   across it, so a trajectory responds only to the filters aligned with it.
+   The two modal angles are the two families.
 4. **Local angles, global measurement** — on a long record the pattern turns,
    so the angles are fitted per block and the per-block fields are blended with
    a partition of unity into two continuous fields. The spacings are then read
@@ -47,6 +56,11 @@ uses their agreement as an internal check.
    maximum and a short cut makes weak maxima look prominent.
 5. **Spacings** — peaks along each vertical cut; consecutive differences are
    cell widths. Each family gives an independent estimate.
+
+The analysis always happens at a fixed number of pixels per cell, so the same
+record measured from a small scan and a large one gives the same answer — and
+the cross-track filter, the thing that selects a thin track, is never allowed
+to fall below a pixel and stop filtering.
 
 Every length in the pipeline is a fraction of the cell width — which is the
 quantity being measured, so the scale has to be chosen rather than assumed.
@@ -114,7 +128,9 @@ pip install -e '.[pdf]'          # to read foils straight out of a PDF figure
 ## Use
 
 ```bash
-# a photographed or exported foil: the physical extent is required
+# a photographed or exported foil: the physical extent is all that is required.
+# Whether the tracks are dark or bright, the contrast window and the cell scale
+# are all read from the record.
 sootviz measure foil.png --width 120 --height 38 --unit mm --out run1
 
 # a figure inside a PDF, third raster on page 19
@@ -150,10 +166,11 @@ Then **look at `*_families.png` before you use the number.** Each mark is one
 trajectory crossing one cut, and every spacing in the histogram is the gap
 between two marks of the same colour on the same cut — so the marks should lie
 along the tracks and string out into lines following them. If they do not, the
-controls that matter are, in order: `--polarity`, `--cell` (an expected cell
-width, which turns the scale search off), `--equalise` (the contrast window, in
-cells), and `--exclude-x` (physical x positions to skip — seams, mounting
-damage, burn-through).
+controls that matter are, in order: `--polarity` (normally read from the
+record), `--cell` (an expected cell width, which turns the scale search off),
+`--equalise` (the contrast window in cells, normally chosen by trying several
+and keeping the most coherent), and `--exclude-x` (physical x positions to
+skip — seams, mounting damage, burn-through).
 
 From Python, see [examples/python_api.py](examples/python_api.py).
 

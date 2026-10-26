@@ -92,8 +92,8 @@ function arrived(r) {
 $("no").addEventListener("click", () => {
   show("step-check", false); show("step-result", false);
   $("step-load").scrollIntoView({ behavior: "smooth", block: "start" });
-  hint("Try, in this order: set how the tracks appear (dark or bright), then "
-     + "raise the contrast window. Then measure again.");
+  hint("Open Advanced and set how the tracks appear (dark or bright), or give "
+     + "the contrast window explicitly. Then measure again.");
   $("pol").focus();
 });
 
@@ -119,6 +119,7 @@ $("yes").addEventListener("click", () => {
     ["scale sensitivity", isFinite(r.sensitivity) ? `${Math.round(r.sensitivity)} %` : "—"],
     ["coherence", sig(r.coherence, 2)],
     ["tracks read as", r.polarity],
+    ["contrast window", r.equalise ? `${r.equalise} cells` : "—"],
   ].map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("");
 
   const flags = [];

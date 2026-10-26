@@ -27,10 +27,11 @@ def _add_common(p):
                    help="fit one pair of family angles for the whole record")
     p.add_argument("--block", type=float, default=2.5,
                    help="grid block size, in cell widths (default 2.5)")
-    p.add_argument("--equalise", type=float, default=2.5,
-                   help="contrast-equalisation window, in cell widths "
-                        "(default 2.5; a window near one cell erases the "
-                        "pattern, so raise it rather than lower it)")
+    p.add_argument("--equalise", type=float, default=None,
+                   help="contrast-equalisation window, in cell widths. "
+                        "Chosen from the record when not given; pass one only "
+                        "to override, and keep it well above one cell -- at "
+                        "the scale of a cell it erases the pattern")
     p.add_argument("--exclude-x", type=float, nargs="*", default=(),
                    help="x positions to skip (plate seams, damage)")
     p.add_argument("--pdf-page", type=int, default=None)

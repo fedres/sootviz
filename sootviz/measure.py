@@ -9,6 +9,7 @@ from scipy.signal import find_peaks
 from scipy.stats import skew
 
 from .clean import clean as clean_image
+from .filters import blur
 from .io import Foil
 from .tracks import (Block, bank, blend, family_angles, grid_blocks,
                      local_normalise, ridge_map)
@@ -27,7 +28,13 @@ class Config:
     exclude_x: tuple = ()            # physical x to skip (seams, damage)
     # cleaning
     despeckle_frac: float = 0.03
-    equalise_frac: float = 2.5
+    # Contrast-equalisation window, in cell widths. None chooses it from the
+    # record. The window has to be well above one cell -- equalise at the
+    # scale of a cell and the pattern goes with the illumination -- but how
+    # far above depends on how unevenly the record is lit, which is a property
+    # of the record and not something a user should have to guess.
+    equalise_frac: float | None = None
+    equalise_candidates: tuple = (1.8, 2.5, 4.0)
     denoise_frac: float = 0.05
     # ridge map and filter bank
     fine_frac: float = 0.024
@@ -85,6 +92,7 @@ class Result:
     lam2_x: np.ndarray = field(repr=False, default=None)
     ridge: np.ndarray = field(repr=False, default=None)
     align: np.ndarray = field(repr=False, default=None)
+    equalise: float = 2.5
 
     @property
     def lam_x(self):
@@ -185,7 +193,9 @@ class Result:
                 f"{self.alignment():.0f} (50 = chance), "
                 f"{self.on_track():.0f} % in the top quartile\n"
                 f"  families agree to {self.family_agreement():.0f} %, "
-                f"coherence {self.coherence:.2f}, polarity '{self.polarity}', "
+                f"coherence {self.coherence:.2f}, polarity '{self.polarity}' "
+                f"and contrast window {self.equalise:.1f} cells chosen "
+                f"automatically, "
                 f"{len(self.blocks)} block(s)"
                 + ("" if not np.isfinite(self.scale_sensitivity()) else
                    f"\n  scale sensitivity {self.scale_sensitivity():.0f} % "
@@ -217,7 +227,11 @@ def _spacings(F, foil: Foil, cfg: Config, cell: float, region=None,
         pk, _ = find_peaks(col, prominence=cfg.prominence * col.max(),
                            distance=dist)
         if collect is not None:
-            collect.append((xp / s, (np.sort(pk) + ys) / s))
+            # +0.5 because a peak at pixel i refers to the centre of that
+            # pixel, which is where imshow places it; without this every mark
+            # is drawn half a pixel up and to the left of the feature it found.
+            # Spacings are differences, so the half pixel cancels there.
+            collect.append(((xp + 0.5) / s, (np.sort(pk) + ys + 0.5) / s))
         if len(pk) > 1:
             d = list(np.diff(np.sort(pk)) / s)
             out += d
@@ -225,6 +239,24 @@ def _spacings(F, foil: Foil, cfg: Config, cell: float, region=None,
     if with_x:
         return np.asarray(out), np.asarray(xo)
     return np.asarray(out)
+
+
+def _angle_set(cfg: Config, hint=None, pad: float = 10.0):
+    """Angles the bank has to cover.
+
+    The full sweep is only needed to FIND the two families. Their orientation
+    barely moves between steps of the scale search, so once it is known the
+    bank only has to cover a band around each -- about ten angles instead of
+    twenty-nine, and the bank is essentially the whole cost of a pass.
+    """
+    lo, hi, st = cfg.angles
+    full = np.arange(lo, hi + 1e-9, st)
+    if hint is None or any(h is None for h in hint):
+        return full
+    keep = np.zeros(full.shape, bool)
+    for a in hint:
+        keep |= np.abs(full - a) <= pad + 1e-9
+    return full[keep] if keep.sum() >= 4 else full
 
 
 def _decimate(foil: Foil, cell: float, px_per_cell: float,
@@ -266,14 +298,15 @@ def _decimate(foil: Foil, cell: float, px_per_cell: float,
 
 
 def _once(foil: Foil, cfg: Config, cell: float, polarity: str,
-          quick: bool = False):
+          quick: bool = False, eq: float | None = None, angles_hint=None):
     foil = _decimate(foil, cell, cfg.px_per_cell)
     s = foil.s
+    eq = eq if eq is not None else (cfg.equalise_frac or 2.5)
     cl = clean_image(foil.image, s, cell, cfg.despeckle_frac,
-                     cfg.equalise_frac, cfg.denoise_frac)
+                     eq, cfg.denoise_frac)
     R = ridge_map(cl, s, cell, polarity, cfg.fine_frac, cfg.coarse_frac)
-    lo, hi, st = cfg.angles
-    angles = np.arange(lo, hi + 1e-9, st)
+    st = cfg.angles[2]
+    angles = _angle_set(cfg, angles_hint)
     resp = bank(R, s, cell, angles, cfg.length_frac, cfg.width_frac)
     ny, nx = foil.image.shape
 
@@ -360,7 +393,7 @@ def _polarity(foil: Foil, cfg: Config, cell: float) -> tuple:
     """
     d = _decimate(foil, cell, cfg.px_per_cell)
     cl = clean_image(d.image, d.s, cell, cfg.despeckle_frac,
-                     cfg.equalise_frac, cfg.denoise_frac)
+                     cfg.equalise_frac or 2.5, cfg.denoise_frac)
     sc = {}
     for pol in ("dark", "bright"):
         R = ridge_map(cl, d.s, cell, pol, cfg.fine_frac, cfg.coarse_frac)
@@ -388,10 +421,14 @@ def _solve(foil: Foil, cfg: Config, pol: str, verbose=False):
     -- and the only root lies deep in the subdividing regime, which returned
     1.5 mm for a lattice built with 2.5 mm cells.
     """
-    rows, best = [], None
+    rows, best, hint = [], None, None
     c, stop = foil.height / 3.0, foil.height / 20.0
     while c >= stop:
-        out = _once(foil, cfg, c, pol, quick=True)
+        out = _once(foil, cfg, c, pol, quick=True, angles_hint=hint)
+        if hint is None:
+            got = [b for b, _ in out["blocks"] if b is not None]
+            if got:
+                hint = (got[0].a1, got[0].a2)
         lam = float(np.median(out["lam"])) if len(out["lam"]) else float("nan")
         rows.append((float(c), lam))
         if verbose:
@@ -411,6 +448,34 @@ def _solve(foil: Foil, cfg: Config, pol: str, verbose=False):
         _, l, cc = max(fin)
         best = (l, cc)
     return best[0], best[1], rows
+
+
+def _choose_equalise(foil: Foil, cfg: Config, cell: float, pol: str,
+                     verbose=False):
+    """Pick the contrast window from the record.
+
+    A window near one cell erases the pattern along with the illumination; a
+    very wide one leaves the illumination in place. Both failures are visible
+    in the cleaned image itself, so they are judged there rather than by
+    running the whole pipeline for each candidate: what should survive is
+    structure at the scale of a cell, and what should not is variation over
+    many cells. The window with the best ratio of the two wins.
+    """
+    d = _decimate(foil, cell, cfg.px_per_cell)
+    px = max(2.0, cell * d.s)
+    best = None
+    for eq in cfg.equalise_candidates:
+        cl = clean_image(d.image, d.s, cell, cfg.despeckle_frac, eq,
+                         cfg.denoise_frac)
+        trend = float(blur(cl, 4.0 * px).std())                  # left behind
+        signal = float((blur(cl, 0.3 * px) - blur(cl, 1.2 * px)).std())
+        score = signal / (trend + 1e-6)
+        if verbose:
+            print(f"    contrast window {eq:.1f} cells: cell-scale signal "
+                  f"{signal:.3f}, illumination left {trend:.3f} -> {score:.2f}")
+        if best is None or score > best[0]:
+            best = (score, eq)
+    return best[1] if best else 2.5
 
 
 def measure(foil: Foil, cfg: Config | None = None, verbose: bool = False) -> Result:
@@ -438,11 +503,16 @@ def measure(foil: Foil, cfg: Config | None = None, verbose: bool = False) -> Res
 
     ladder = []
     if cfg.cell:
-        out = _once(foil, cfg, cfg.cell, pol)
         cell = cfg.cell
     else:
         _, cell, ladder = _solve(foil, cfg, pol, verbose)
-        out = _once(foil, cfg, cell, pol)      # final pass, with the grid
+    eq = cfg.equalise_frac
+    if eq is None:
+        eq = _choose_equalise(foil, cfg, cell, pol, verbose)
+        if verbose:
+            print(f"    contrast window: {eq:.1f} cells")
+    out = _once(foil, cfg, cell, pol, eq=eq)   # final pass, with the grid
+    out["equalise"] = eq
     if not len(out["lam"]):
         raise RuntimeError("no trajectories found: check the physical extent, "
                            "or set Config(cell=...) to the expected cell width")
@@ -456,4 +526,5 @@ def measure(foil: Foil, cfg: Config | None = None, verbose: bool = False) -> Res
                   lam1=out["lam1"], lam2=out["lam2"], ladder=ladder,
                   cuts1=out["cuts1"] or [], cuts2=out["cuts2"] or [],
                   ridge=out["ridge"], align=out["align"],
+                  equalise=out["equalise"],
                   lam1_x=out["lam1_x"], lam2_x=out["lam2_x"])

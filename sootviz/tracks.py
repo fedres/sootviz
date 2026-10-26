@@ -46,15 +46,24 @@ def ridge_map(clean_img: np.ndarray, s: float, cell: float,
 
 def oriented(R: np.ndarray, deg: float, s: float, cell: float,
              length_frac: float = 0.30, width_frac: float = 0.03) -> np.ndarray:
-    """Response of a line matched filter at `deg` (x right, y down-image)."""
+    """Response of a line matched filter at `deg`, measured in IMAGE
+    coordinates: x to the right, y down the image, so a positive angle is a
+    line that descends to the right as you look at it.
+
+    The rotation sign matters. Taking it the other way labels each family with
+    the angle it would have in a y-up frame, which is the opposite of what the
+    figure shows, so the two families come out swapped against the record: the
+    field labelled with the positive angle tracked the trajectories that
+    visibly descend to the LEFT.
+    """
     ny, nx = R.shape
-    rot = ndi.rotate(R, -deg, reshape=True, order=1, mode="nearest")
+    rot = ndi.rotate(R, deg, reshape=True, order=1, mode="nearest")
     # across the line: exact, the shape is what selects a thin track.
     # along the line: wide, so the cheap approximation is used.
     sm = ndi.gaussian_filter1d(rot, width_frac * cell * s, axis=0,
                                mode="nearest")
     sm = blur1d(sm, length_frac * cell * s, axis=1)
-    back = ndi.rotate(sm, deg, reshape=True, order=1, mode="nearest")
+    back = ndi.rotate(sm, -deg, reshape=True, order=1, mode="nearest")
     cy, cx = back.shape[0] // 2, back.shape[1] // 2
     return back[cy - ny // 2:cy - ny // 2 + ny, cx - nx // 2:cx - nx // 2 + nx]
 

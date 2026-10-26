@@ -130,9 +130,12 @@ def fig_clean(res, out, dpi=170):
     ax[0, 0].set_title(f"{f.name}: as loaded", fontsize=9, loc="left")
     ax[1, 0].imshow(res.clean, cmap="gray", extent=f.extent, aspect="equal",
                     interpolation="lanczos", vmin=-2, vmax=2)
+    # the window actually used, which is normally chosen from the record
     ax[1, 0].set_title(f"after despeckle and local contrast equalisation over "
-                       f"{res.cfg.equalise_frac:g} cell widths "
-                       f"({res.cfg.equalise_frac * res.cell:.3g} {f.unit})",
+                       f"{res.equalise:g} cell widths "
+                       f"({res.equalise * res.cell:.3g} {f.unit})"
+                       + ("" if res.cfg.equalise_frac else
+                          ", chosen from the record"),
                        fontsize=9, loc="left")
     for a in ax[:, 0]:
         a.set_ylabel(f"y [{f.unit}]"); a.tick_params(labelsize=7)
@@ -406,7 +409,8 @@ def write_report(res, outdir, reference=None, prefix=None):
                height=res.foil.height, px_per_unit=res.foil.s,
                px_per_unit_analysis=res.s,
                polarity=res.polarity, coherence=res.coherence,
-               cell_scale_used=res.cell, stats=res.stats(),
+               cell_scale_used=res.cell, equalise_cells_used=res.equalise,
+               stats=res.stats(),
                scale_search=[{"assumed": a, "measured": b}
                              for a, b in res.ladder],
                family_agreement_percent=res.family_agreement(),

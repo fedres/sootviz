@@ -69,7 +69,7 @@ foil = load_foil("/input_image", float(o["width"]), float(o["height"]),
 cfg = Config(
     polarity=o.get("polarity", "auto"),
     grid=not o.get("no_grid", False),
-    equalise_frac=float(o.get("equalise", 2.5)),
+    equalise_frac=float(o["equalise"]) if o.get("equalise") else None,
 )
 res = measure(foil, cfg, verbose=True)
 written = write_report(res, Path("/report"), prefix="foil")
@@ -85,7 +85,7 @@ json.dumps(_json_safe(dict(
     unit=foil.unit, cells_across=res.cells_across(),
     family_agreement=res.family_agreement(), coherence=res.coherence,
     sensitivity=res.scale_sensitivity(), polarity=res.polarity,
-    alignment=res.alignment(), on_track=res.on_track(),
+    alignment=res.alignment(), on_track=res.on_track(), equalise=res.equalise,
     blocks=len([b for b, _ in res.blocks if b is not None]),
     cell_scale=res.cell,
     blocks_table=blocks,

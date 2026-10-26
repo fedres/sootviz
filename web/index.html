@@ -13,6 +13,7 @@
   <p class="byline">
     Karthik Thyagarajan ·
     <a href="https://strawhatcfd.com" target="_blank" rel="noopener">Strawhat CFD</a> ·
+    <a href="benchmarks/">benchmark gallery</a> ·
     <a href="https://github.com/fedres/sootviz" target="_blank" rel="noopener">source</a> ·
     MIT licence
   </p>
@@ -49,17 +50,24 @@
     </div>
   </div>
 
-  <h3>Optional</h3>
-  <p style="font-size:13.5px;color:var(--dim)">
-    Leave these alone unless the verification overlay comes out wrong. The cell
-    width is found from the record itself.
-  </p>
-  <div class="fields">
-    <div class="field"><label for="pol">Tracks are</label>
-      <select id="pol"><option value="auto">auto</option><option value="dark">dark</option><option value="bright">bright</option></select>
+  <details style="margin-top:18px">
+    <summary style="cursor:pointer;font-size:13.5px;color:var(--dim)">
+      Advanced — normally leave these alone
+    </summary>
+    <p style="font-size:13.5px;color:var(--dim);margin-top:10px">
+      Both are decided from the record: whether the trajectories are dark or
+      bright is read from how the ridge strength is distributed, and the
+      contrast window is chosen by trying several and keeping the one whose
+      two families come out most coherent. Override them only if the
+      verification step comes out wrong.
+    </p>
+    <div class="fields">
+      <div class="field"><label for="pol">Tracks are</label>
+        <select id="pol"><option value="auto">auto</option><option value="dark">dark</option><option value="bright">bright</option></select>
+      </div>
+      <div class="field"><label for="eq" title="In cell widths; leave blank for automatic">Contrast window</label><input id="eq" type="number" step="any" placeholder="auto"></div>
     </div>
-    <div class="field"><label for="eq" title="In cell widths; raise it, never lower it">Contrast window</label><input id="eq" type="number" step="any" value="2.5"></div>
-  </div>
+  </details>
 
   <div class="row">
     <button id="run" disabled>Measure</button>
