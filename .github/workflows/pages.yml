@@ -31,6 +31,12 @@ jobs:
           cp web/index.html web/style.css web/app.js web/worker.js _site/
           # the worker installs this exact name
           cp dist/*.whl _site/sootviz_compute-0.1.0-py3-none-any.whl
+          # stamp the build, so a cached wheel from an older build cannot be
+          # served against a newer page, and so a user can say which build
+          # produced a figure
+          BUILD="$(git rev-parse --short HEAD)"
+          sed -i "s/__BUILD__/$BUILD/g" _site/worker.js _site/index.html
+          echo "built $BUILD"
 
       - name: run the benchmarks and build the gallery
         run: |

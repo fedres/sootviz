@@ -2,7 +2,12 @@
 // line runs. Everything happens inside this worker, on the visitor's machine —
 // no image is ever sent anywhere.
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
-const WHEEL = "./sootviz_compute-0.1.0-py3-none-any.whl";
+// The wheel has the same name in every build, so a browser that cached an
+// older one would quietly run it against a newer page. The build stamp in the
+// query string makes each build a distinct URL. CI substitutes it; left as the
+// placeholder when served straight from the repo.
+const BUILD = "__BUILD__";
+const WHEEL = `./sootviz_compute-0.1.0-py3-none-any.whl?v=${BUILD}`;
 
 importScripts(PYODIDE + "pyodide.js");
 
@@ -37,7 +42,7 @@ sys.stdout = _Relay()
 import sootviz
 `);
   const v = pyodide.runPython("sootviz.__version__");
-  say("ready", { version: v });
+  say("ready", { version: v, build: BUILD });
 }
 
 const bootPromise = boot().catch((e) => say("error", { text: String(e) }));
