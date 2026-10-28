@@ -3,6 +3,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SootViz — detonation cell widths from soot foils</title>
 <meta name="description" content="Measure the detonation cell width from a soot-foil record, in your browser. The image never leaves your machine.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
 
@@ -11,8 +14,8 @@
   <h1>Soot<span>Viz</span></h1>
   <p class="tagline">Detonation cell widths from soot-foil records — with a measurement you check by eye before you trust it.</p>
   <p class="byline">
-    Karthik Thyagarajan ·
-    <a href="https://strawhatcfd.com" target="_blank" rel="noopener">Strawhat CFD</a> ·
+    Built at <a href="https://strawhatcfd.com" target="_blank" rel="noopener">Straw Hat CFD</a>
+    by Karthik Thyagarajan ·
     <a href="benchmarks/">benchmark gallery</a> ·
     <a href="https://github.com/fedres/sootviz" target="_blank" rel="noopener">source</a> ·
     MIT licence
@@ -267,6 +270,34 @@
   scanned.
 </p>
 
+<!-- sponsor ──────────────────────────────────────────────────────── -->
+<section class="sponsor">
+  <h2>Sponsor this work</h2>
+  <p style="max-width:62ch">
+    SootViz is free, runs entirely in your browser, and will stay that way.
+    It was built at <a href="https://strawhatcfd.com" target="_blank" rel="noopener">Straw Hat CFD</a>
+    alongside our solver work, and it is maintained the same way — by us, out
+    of our own time. If it saved you an afternoon with a ruler, or if a number
+    from it ends up in a paper, consider sponsoring its upkeep or talking to us
+    about the work we do.
+  </p>
+  <ul class="sponsor-why">
+    <li><b>What sponsorship buys</b>Cell length as well as width, batch
+      processing, and support for more record formats.</li>
+    <li><b>What it keeps free</b>The browser tool, the benchmark gallery and
+      the source — permanently, with no account and no upload.</li>
+    <li><b>Who we are</b>Straw Hat CFD builds compressible reacting-flow
+      solvers and the measurement tools that go with them.</li>
+  </ul>
+  <div class="row">
+    <a class="dl" style="margin:0" href="https://github.com/sponsors/fedres" target="_blank" rel="noopener">
+      <button>Sponsor on GitHub</button></a>
+    <a class="dl" style="margin:0" href="https://strawhatcfd.com" target="_blank" rel="noopener">
+      <button class="ghost">Work with Straw Hat CFD</button></a>
+    <a class="dl" href="mailto:kthyagarajan@strawhatcfd.com">kthyagarajan@strawhatcfd.com</a>
+  </div>
+</section>
+
 <!-- citation ─────────────────────────────────────────────────────── -->
 <h2 id="cite">If you use SootViz, please cite it</h2>
 <p>
@@ -293,9 +324,11 @@
 
 <footer>
   <p>
-    <strong>SootViz</strong> — built by Karthik Thyagarajan at
-    <a href="https://strawhatcfd.com" target="_blank" rel="noopener">Strawhat CFD</a>.
-    MIT licensed · <a href="https://github.com/fedres/sootviz" target="_blank" rel="noopener">source and command-line tool</a>
+    <strong>SootViz</strong> — built at
+    <a href="https://strawhatcfd.com" target="_blank" rel="noopener">Straw Hat CFD</a>
+    by Karthik Thyagarajan. MIT licensed ·
+    <a href="https://github.com/fedres/sootviz" target="_blank" rel="noopener">source and command-line tool</a> ·
+    <a href="https://github.com/sponsors/fedres" target="_blank" rel="noopener">sponsor</a>
   </p>
   <p>
     Build <code id="build">__BUILD__</code>. If a figure here does not match

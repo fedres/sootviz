@@ -4,6 +4,7 @@ import pytest
 
 from sootviz import Config, measure, synth_foil, write_report
 from sootviz.clean import clean, equalise
+from sootviz.io import Foil
 from sootviz.tracks import family_angles, grid_blocks, bank, ridge_map
 
 
@@ -229,3 +230,29 @@ def test_a_large_record_does_not_exhaust_memory():
     assert f.image.size > 8e6
     d = _decimate(f, 2.0, Config().px_per_cell)
     assert d.image.size <= 1.6e6, f"frame not capped: {d.image.size/1e6:.1f} Mpx"
+
+
+# ---- claims the paper makes about determinism ------------------------------
+def test_measurement_is_deterministic():
+    """The paper states the pipeline is a deterministic function of the record
+    and its extent. Same input, same output, bit for bit."""
+    f = synth_foil(width=24, height=16, s=25, lam=2.4, skew=10, jitter=0.1)
+    a = measure(f, Config(cell=2.9, polarity="dark"))
+    b = measure(f, Config(cell=2.9, polarity="dark"))
+    assert a.median == b.median
+    assert np.array_equal(np.sort(a.lam), np.sort(b.lam))
+    assert a.cell == b.cell and a.coherence == b.coherence
+
+
+def test_answer_is_independent_of_the_unit_used():
+    """Every length in the pipeline is a fraction of the cell width, so the
+    same record declared in different units must give the same physical
+    answer."""
+    img = synth_foil(width=30, height=20, s=25, lam=2.5, skew=8,
+                     jitter=0.08).image
+    mm = Foil(img, 25.0, 30.0, 20.0, "mm", "mm")
+    cm = Foil(img, 250.0, 3.0, 2.0, "cm", "cm")   # same record, declared in cm
+    a = measure(mm, Config(polarity="dark"))
+    b = measure(cm, Config(polarity="dark"))
+    assert abs(a.median - 10 * b.median) / a.median < 0.02, (
+        f"{a.median:.4f} mm vs {b.median:.4f} cm")
